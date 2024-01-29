@@ -3,12 +3,22 @@ use crate::registers::Registers;
 
 #[allow(dead_code)]
 enum Instruction {
-    ADD(ArithmeticTarget),
+    ADD(Arithmetic8BitTarget),
+    ADDHL(Arithmetic16BitTarget),
 }
 
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
-enum ArithmeticTarget {
+enum Arithmetic16BitTarget {
+    HL,
+    BC,
+    SP,
+    DE,
+}
+
+#[derive(Copy, Clone)]
+#[allow(dead_code)]
+enum Arithmetic8BitTarget {
     A,
     B,
     C,
@@ -17,13 +27,14 @@ enum ArithmeticTarget {
     F,
     H,
     L,
-    HL,
     D8,
 }
 
 #[allow(dead_code)]
 pub struct CPU {
     registers: Registers,
+    sp: u16, // Stack Pointer
+    pc: u16, // Program Counter
 }
 
 #[allow(dead_code)]
@@ -31,19 +42,22 @@ impl CPU {
     pub fn new() -> CPU {
         CPU {
             registers: Registers::new(),
+            sp: 0x00,
+            pc: 0x00,
         }
     }
 
     fn exec(&mut self, instruction: Instruction) {
         match instruction {
             ADD(target) => self.add(target),
+            ADDHL(target) => self.add_hl(target),
         };
     }
 
     #[inline(always)]
-    fn add(&mut self, target: ArithmeticTarget) {
+    fn add(&mut self, target: Arithmetic8BitTarget) {
         // read a value from the register
-        let value = self.read_register(&target);
+        let value = self.read_8bit_register(&target);
 
         let (new_value, overflow) = self.registers.a.overflowing_add(value);
 
@@ -69,16 +83,41 @@ impl CPU {
     }
 
     #[inline(always)]
-    fn read_register(&self, target: &ArithmeticTarget) -> u8 {
+    fn add_hl(&mut self, target: Arithmetic16BitTarget) {
+        let value = self.read_16bit_register(target);
+        let (new_value, overflow) = self.registers.get_hl().overflowing_add(value);
+
+        // Don't set 0 flag
+        self.registers.f.carry = overflow;
+        self.registers.f.subtract = false;
+
+        self.registers.f.half_carry =
+            ((self.registers.get_hl() & 0xfff) + (value & 0xfff)) & 0x100 == 0x100;
+
+        self.registers.set_hl(new_value);
+    }
+
+    #[inline(always)]
+    fn read_16bit_register(&mut self, target: Arithmetic16BitTarget) -> u16 {
         match target {
-            ArithmeticTarget::A => self.registers.a,
-            ArithmeticTarget::B => self.registers.b,
-            ArithmeticTarget::C => self.registers.c,
-            ArithmeticTarget::D => self.registers.d,
-            ArithmeticTarget::E => self.registers.e,
-            ArithmeticTarget::F => self.registers.f.into(),
-            ArithmeticTarget::H => self.registers.h,
-            ArithmeticTarget::L => self.registers.l,
+            Arithmetic16BitTarget::HL => self.registers.get_hl(),
+            Arithmetic16BitTarget::BC => self.registers.get_bc(),
+            Arithmetic16BitTarget::DE => self.registers.get_de(),
+            Arithmetic16BitTarget::SP => self.sp,
+        }
+    }
+
+    #[inline(always)]
+    fn read_8bit_register(&self, target: &Arithmetic8BitTarget) -> u8 {
+        match target {
+            Arithmetic8BitTarget::A => self.registers.a,
+            Arithmetic8BitTarget::B => self.registers.b,
+            Arithmetic8BitTarget::C => self.registers.c,
+            Arithmetic8BitTarget::D => self.registers.d,
+            Arithmetic8BitTarget::E => self.registers.e,
+            Arithmetic8BitTarget::F => self.registers.f.into(),
+            Arithmetic8BitTarget::H => self.registers.h,
+            Arithmetic8BitTarget::L => self.registers.l,
             // ArithmeticTarget::HL => self.registers.h, What the fuck?
             // ArithmeticTarget::D8 => self.registers.l,
             _ => unimplemented!(),
