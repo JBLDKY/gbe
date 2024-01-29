@@ -60,7 +60,33 @@ impl CPU {
         };
     }
 
+    #[inline(always)]
+    fn or(&mut self, target: Arithmetic8BitTarget) -> u8 {
+        // TODO implement OR for HL
+        let new_value = self.registers.a | self.read_8bit_register(&target);
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.subtract = false;
+        self.registers.f.half_carry = false;
+        self.registers.f.carry = false;
+
+        new_value
+    }
+
+    #[inline(always)]
+    fn and(&mut self, target: Arithmetic8BitTarget) -> u8 {
+        // TODO implement ADD for HL
+        let new_value = self.registers.a & self.read_8bit_register(&target);
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.subtract = false;
+        self.registers.f.half_carry = true;
+        self.registers.f.carry = false;
+
+        new_value
+    }
+
+    #[inline(always)]
     fn subtract_with_carry(&mut self, target: Arithmetic8BitTarget) {
+        // TODO implement SBC for HL
         let value = self.read_8bit_register(&target);
         let (new_value, overflow) = self
             .registers
@@ -69,22 +95,23 @@ impl CPU {
 
         self.registers.f.zero = new_value == 0;
         self.registers.f.subtract = true;
-        self.registers.f.carry = overflow;
         self.registers.f.half_carry =
             (self.registers.a & 0xf) < ((value & 0xf) + self.registers.f.carry as u8);
+        self.registers.f.carry = overflow;
 
         self.registers.a = new_value;
     }
 
     #[inline(always)]
     fn subtract(&mut self, target: Arithmetic8BitTarget) {
+        // TODO implement SUB for HL
         let value = self.read_8bit_register(&target);
         let (new_value, overflow) = self.registers.a.overflowing_sub(value);
 
         self.registers.f.zero = new_value == 0;
         self.registers.f.subtract = true;
-        self.registers.f.carry = overflow;
         self.registers.f.half_carry = (self.registers.a & 0xf) < (value & 0xf);
+        self.registers.f.carry = overflow;
 
         self.registers.a = new_value;
     }
@@ -118,7 +145,6 @@ impl CPU {
 
         // Remember to set the flags
         self.registers.f.zero = new_value == 0;
-        self.registers.f.carry = overflow;
         self.registers.f.subtract = false;
 
         // The half-carry flag is checked during addition to see if there's a carry from the 4th bit to the 5th bit.
