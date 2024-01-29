@@ -1,4 +1,4 @@
-use crate::cpu::Instruction::{ADC, ADD, ADDHL, AND, OR, SBC, SUB};
+use crate::cpu::Instruction::{ADC, ADD, ADDHL, AND, CP, OR, SBC, SUB};
 use crate::registers::Registers;
 
 #[allow(dead_code)]
@@ -10,6 +10,7 @@ enum Instruction {
     SBC(Arithmetic8BitTarget),
     AND(Arithmetic8BitTarget),
     OR(Arithmetic8BitTarget),
+    CP(Arithmetic8BitTarget),
 }
 
 #[derive(Copy, Clone)]
@@ -61,7 +62,20 @@ impl CPU {
             SBC(target) => self.subtract_with_carry(target),
             AND(target) => self.and(target),
             OR(target) => self.or(target),
+            CP(target) => self.compare(target),
         };
+    }
+
+    /// Doesn't set anything other than flags.
+    #[inline(always)]
+    fn compare(&mut self, target: Arithmetic8BitTarget) {
+        // TODO implement OR for HL
+        let value = self.read_8bit_register(&target);
+
+        self.registers.f.zero = self.registers.a == value;
+        self.registers.f.subtract = true;
+        self.registers.f.carry = self.registers.a < value;
+        self.registers.f.half_carry = (self.registers.a & 0xF) < (value & 0xF);
     }
 
     #[inline(always)]
