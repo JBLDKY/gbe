@@ -1,4 +1,4 @@
-use crate::cpu::Instruction::{ADC, ADD, ADDHL};
+use crate::cpu::Instruction::{ADC, ADD, ADDHL, SBC, SUB};
 use crate::registers::Registers;
 
 #[allow(dead_code)]
@@ -6,6 +6,8 @@ enum Instruction {
     ADD(Arithmetic8BitTarget),
     ADC(Arithmetic8BitTarget),
     ADDHL(Arithmetic16BitTarget),
+    SUB(Arithmetic8BitTarget),
+    SBC(Arithmetic8BitTarget),
 }
 
 #[derive(Copy, Clone)]
@@ -53,7 +55,38 @@ impl CPU {
             ADD(target) => self.add(target),
             ADC(target) => self.add_with_carry(target),
             ADDHL(target) => self.add_hl(target),
+            SUB(target) => self.subtract(target),
+            SBC(target) => self.subtract_with_carry(target),
         };
+    }
+
+    fn subtract_with_carry(&mut self, target: Arithmetic8BitTarget) {
+        let value = self.read_8bit_register(&target);
+        let (new_value, overflow) = self
+            .registers
+            .a
+            .overflowing_sub(value + self.registers.f.carry as u8);
+
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.subtract = true;
+        self.registers.f.carry = overflow;
+        self.registers.f.half_carry =
+            (self.registers.a & 0xf) < ((value & 0xf) + self.registers.f.carry as u8);
+
+        self.registers.a = new_value;
+    }
+
+    #[inline(always)]
+    fn subtract(&mut self, target: Arithmetic8BitTarget) {
+        let value = self.read_8bit_register(&target);
+        let (new_value, overflow) = self.registers.a.overflowing_sub(value);
+
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.subtract = true;
+        self.registers.f.carry = overflow;
+        self.registers.f.half_carry = (self.registers.a & 0xf) < (value & 0xf);
+
+        self.registers.a = new_value;
     }
 
     #[inline(always)]
@@ -90,7 +123,7 @@ impl CPU {
 
         // The half-carry flag is checked during addition to see if there's a carry from the 4th bit to the 5th bit.
         // It is used for BCD (Binary Coded Decimal) operations. The half-carry is set if the addition
-        // of the lower nibbles (4 bits) of the accumulator and the value is greater than 0xF, indicating
+        // of the lower nibbles (4 bits) of the accumulator and the value is greater than 0xf, indicating
         // an overflow from the lower nibble to the upper nibble. We use `0x10` to check the 5th bit because
         // if this bit is set, it indicates the lower nibble overflowed after addition.
         // Example: If the lower nibble of `a` is `0b1111` (0xF) and we add `0b0001` (1) to it,
