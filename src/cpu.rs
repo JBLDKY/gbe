@@ -65,6 +65,16 @@ impl CPU {
     }
 
     #[inline(always)]
+    fn xor(&mut self, target: Arithmetic8BitTarget) {
+        // TODO implement OR for HL
+        let new_value = self.registers.a ^ self.read_8bit_register(&target);
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.subtract = false;
+        self.registers.f.half_carry = false;
+        self.registers.f.carry = false;
+    }
+
+    #[inline(always)]
     fn or(&mut self, target: Arithmetic8BitTarget) {
         // TODO implement OR for HL
         let new_value = self.registers.a | self.read_8bit_register(&target);
