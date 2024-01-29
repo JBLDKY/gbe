@@ -1,4 +1,4 @@
-use crate::cpu::Instruction::{ADC, ADD, ADDHL, AND, CP, OR, SBC, SUB};
+use crate::cpu::Instruction::{ADC, ADD, ADDHL, AND, CP, INC, OR, SBC, SUB};
 use crate::registers::Registers;
 
 #[allow(dead_code)]
@@ -11,6 +11,7 @@ enum Instruction {
     AND(Arithmetic8BitTarget),
     OR(Arithmetic8BitTarget),
     CP(Arithmetic8BitTarget),
+    INC(Arithmetic8BitTarget),
 }
 
 #[derive(Copy, Clone)]
@@ -63,19 +64,57 @@ impl CPU {
             AND(target) => self.and(target),
             OR(target) => self.or(target),
             CP(target) => self.compare(target),
+            INC(target) => self.increment(target),
         };
+    }
+
+    #[inline(always)]
+    fn modify_8bit_register<F>(&mut self, target: Arithmetic8BitTarget, modifier: F) -> u8
+    where
+        F: FnOnce(u8) -> u8,
+    {
+        let value = self.read_8bit_register(&target);
+        let new_value = modifier(value);
+
+        match target {
+            Arithmetic8BitTarget::A => self.registers.a = new_value,
+            Arithmetic8BitTarget::B => self.registers.b = new_value,
+            Arithmetic8BitTarget::C => self.registers.c = new_value,
+            Arithmetic8BitTarget::D => self.registers.d = new_value,
+            Arithmetic8BitTarget::E => self.registers.e = new_value,
+            Arithmetic8BitTarget::H => self.registers.h = new_value,
+            Arithmetic8BitTarget::L => self.registers.l = new_value,
+            _ => {
+                panic!(
+                    "Incrementing invalid register, probably F or D8 with value: {}",
+                    value
+                )
+            }
+        }
+        new_value
+    }
+
+    #[inline(always)]
+    fn increment(&mut self, target: Arithmetic8BitTarget) {
+        // TODO implement for D8, HL, DE, BC, SP,
+        // Inefficient as hell
+        let new_value = self.modify_8bit_register(target, |value| value.wrapping_add(1));
+
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.subtract = false;
+        self.registers.f.half_carry = (new_value & 0xf) == 0x1;
+        // self.registers.f.carry
     }
 
     /// Doesn't set anything other than flags.
     #[inline(always)]
     fn compare(&mut self, target: Arithmetic8BitTarget) {
         // TODO implement OR for HL
-        let value = self.read_8bit_register(&target);
-
-        self.registers.f.zero = self.registers.a == value;
-        self.registers.f.subtract = true;
-        self.registers.f.carry = self.registers.a < value;
-        self.registers.f.half_carry = (self.registers.a & 0xF) < (value & 0xF);
+        let new_value = self.registers.a ^ self.read_8bit_register(&target);
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.subtract = false;
+        self.registers.f.half_carry = false;
+        self.registers.f.carry = false;
     }
 
     #[inline(always)]
