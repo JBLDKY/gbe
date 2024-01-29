@@ -1,9 +1,10 @@
-use crate::cpu::Instruction::ADD;
+use crate::cpu::Instruction::{ADC, ADD, ADDHL};
 use crate::registers::Registers;
 
 #[allow(dead_code)]
 enum Instruction {
     ADD(Arithmetic8BitTarget),
+    ADC(Arithmetic8BitTarget),
     ADDHL(Arithmetic16BitTarget),
 }
 
@@ -50,19 +51,39 @@ impl CPU {
     fn exec(&mut self, instruction: Instruction) {
         match instruction {
             ADD(target) => self.add(target),
+            ADC(target) => self.add_with_carry(target),
             ADDHL(target) => self.add_hl(target),
         };
     }
 
     #[inline(always)]
+    fn add_with_carry(&mut self, target: Arithmetic8BitTarget) {
+        // TODO: Implement ADC for HL
+        let value = self.read_8bit_register(&target);
+        let (new_value, overflow) = self
+            .registers
+            .a
+            .overflowing_add(value + self.registers.f.carry as u8);
+
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.carry = overflow;
+        self.registers.f.subtract = false;
+        self.registers.f.half_carry = ((self.registers.a & 0xf) + (value & 0xf)) & 0x10 == 0x10;
+
+        self.registers.a = new_value;
+    }
+
+    #[inline(always)]
     fn add(&mut self, target: Arithmetic8BitTarget) {
+        // TODO: Implement ADD for SP, i8
+        // TODO: Implement ADD for HL
+
         // read a value from the register
         let value = self.read_8bit_register(&target);
 
         let (new_value, overflow) = self.registers.a.overflowing_add(value);
 
         // Remember to set the flags
-        // TODO: Figure out what half_carry actually means
         self.registers.f.zero = new_value == 0;
         self.registers.f.carry = overflow;
         self.registers.f.subtract = false;
