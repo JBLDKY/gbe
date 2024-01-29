@@ -1,4 +1,4 @@
-use crate::cpu::Instruction::{ADC, ADD, ADDHL, AND, CP, INC, OR, SBC, SUB};
+use crate::cpu::Instruction::{ADC, ADD, ADDHL, AND, CP, DEC, INC, OR, SBC, SUB};
 use crate::registers::Registers;
 
 #[allow(dead_code)]
@@ -12,6 +12,7 @@ enum Instruction {
     OR(Arithmetic8BitTarget),
     CP(Arithmetic8BitTarget),
     INC(Arithmetic8BitTarget),
+    DEC(Arithmetic8BitTarget),
 }
 
 #[derive(Copy, Clone)]
@@ -65,6 +66,7 @@ impl CPU {
             OR(target) => self.or(target),
             CP(target) => self.compare(target),
             INC(target) => self.increment(target),
+            DEC(target) => self.decrement(target),
         };
     }
 
@@ -95,9 +97,20 @@ impl CPU {
     }
 
     #[inline(always)]
+    fn decrement(&mut self, target: Arithmetic8BitTarget) {
+        // TODO implement for D8, HL, DE, BC, SP,
+        let original_value = self.read_8bit_register(&target);
+        let new_value = self.modify_8bit_register(target, |value| value.wrapping_sub(1));
+
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.subtract = true;
+        self.registers.f.half_carry = (original_value & 0x0F) == 0;
+        // self.registers.f.carry
+    }
+
+    #[inline(always)]
     fn increment(&mut self, target: Arithmetic8BitTarget) {
         // TODO implement for D8, HL, DE, BC, SP,
-        // Inefficient as hell
         let new_value = self.modify_8bit_register(target, |value| value.wrapping_add(1));
 
         self.registers.f.zero = new_value == 0;
