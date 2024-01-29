@@ -1,6 +1,7 @@
 use crate::cpu::Instruction::{ADC, ADD, ADDHL, AND, CP, DEC, INC, OR, SBC, SUB};
 use crate::registers::Registers;
 
+// TODO fix linting issues
 #[allow(dead_code)]
 enum Instruction {
     ADD(Arithmetic8BitTarget),
@@ -217,7 +218,7 @@ impl CPU {
         // read a value from the register
         let value = self.read_8bit_register(&target);
 
-        let (new_value, overflow) = self.registers.a.overflowing_add(value);
+        let new_value = self.registers.a.wrapping_add(value);
 
         // Remember to set the flags
         self.registers.f.zero = new_value == 0;
