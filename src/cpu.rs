@@ -1,4 +1,4 @@
-use crate::cpu::Instruction::{ADC, ADD, ADDHL, SBC, SUB};
+use crate::cpu::Instruction::{ADC, ADD, ADDHL, AND, OR, SBC, SUB};
 use crate::registers::Registers;
 
 #[allow(dead_code)]
@@ -8,6 +8,8 @@ enum Instruction {
     ADDHL(Arithmetic16BitTarget),
     SUB(Arithmetic8BitTarget),
     SBC(Arithmetic8BitTarget),
+    AND(Arithmetic8BitTarget),
+    OR(Arithmetic8BitTarget),
 }
 
 #[derive(Copy, Clone)]
@@ -57,31 +59,29 @@ impl CPU {
             ADDHL(target) => self.add_hl(target),
             SUB(target) => self.subtract(target),
             SBC(target) => self.subtract_with_carry(target),
+            AND(target) => self.and(target),
+            OR(target) => self.or(target),
         };
     }
 
     #[inline(always)]
-    fn or(&mut self, target: Arithmetic8BitTarget) -> u8 {
+    fn or(&mut self, target: Arithmetic8BitTarget) {
         // TODO implement OR for HL
         let new_value = self.registers.a | self.read_8bit_register(&target);
         self.registers.f.zero = new_value == 0;
         self.registers.f.subtract = false;
         self.registers.f.half_carry = false;
         self.registers.f.carry = false;
-
-        new_value
     }
 
     #[inline(always)]
-    fn and(&mut self, target: Arithmetic8BitTarget) -> u8 {
+    fn and(&mut self, target: Arithmetic8BitTarget) {
         // TODO implement ADD for HL
         let new_value = self.registers.a & self.read_8bit_register(&target);
         self.registers.f.zero = new_value == 0;
         self.registers.f.subtract = false;
         self.registers.f.half_carry = true;
         self.registers.f.carry = false;
-
-        new_value
     }
 
     #[inline(always)]
