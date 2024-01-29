@@ -76,10 +76,14 @@ impl CPU {
     }
 
     fn set_carry(&mut self) {
+        self.registers.f.subtract = false;
+        self.registers.f.half_carry = false;
         self.registers.f.carry = true;
     }
 
     fn set_unset(&mut self) {
+        self.registers.f.subtract = false;
+        self.registers.f.half_carry = false;
         self.registers.f.carry = !self.registers.f.carry;
     }
 
