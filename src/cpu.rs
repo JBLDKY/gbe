@@ -1,4 +1,4 @@
-use crate::cpu::Instruction::{ADC, ADD, ADDHL, AND, CP, DEC, INC, OR, SBC, SUB};
+use crate::cpu::Instruction::{ADC, ADD, ADDHL, AND, CCF, CP, DEC, INC, OR, SBC, SUB};
 use crate::registers::Registers;
 
 // TODO fix linting issues
@@ -14,6 +14,7 @@ enum Instruction {
     CP(Arithmetic8BitTarget),
     INC(Arithmetic8BitTarget),
     DEC(Arithmetic8BitTarget),
+    CCF(Arithmetic8BitTarget),
 }
 
 #[derive(Copy, Clone)]
@@ -68,7 +69,12 @@ impl CPU {
             CP(target) => self.compare(target),
             INC(target) => self.increment(target),
             DEC(target) => self.decrement(target),
+            CCF(_) => self.set_unset(),
         };
+    }
+
+    fn set_unset(&mut self) {
+        self.registers.f.carry = !self.registers.f.carry;
     }
 
     #[inline(always)]
