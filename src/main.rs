@@ -3,7 +3,9 @@ mod flags_registers;
 mod registers;
 
 fn main() {
-    let a: u8 = 0b0000_1011;
+    let a: u8 = 0b1000_1011;
+    dbg!(a as i8);
+
     let right = a.rotate_right(1);
     println!("{}", format!("{right:b}"));
 

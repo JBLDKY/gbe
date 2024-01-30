@@ -1,6 +1,6 @@
 use crate::cpu::Instruction::{
     ADC, ADD, ADDHL, AND, BIT, CCF, CP, CPL, DEC, INC, OR, RESET, RL, RLA, RLC, RLCA, RR, RRA, RRC,
-    RRCA, SBC, SCF, SET, SRL, SUB,
+    RRCA, SBC, SCF, SET, SLA, SRA, SRL, SUB, SWAP,
 };
 use crate::registers::Registers;
 
@@ -32,6 +32,9 @@ enum Instruction {
     RL(Arithmetic8BitTarget),
     RRC(Arithmetic8BitTarget),
     RLC(Arithmetic8BitTarget),
+    SRA(Arithmetic8BitTarget),
+    SLA(Arithmetic8BitTarget),
+    SWAP(Arithmetic8BitTarget),
 }
 
 #[derive(Copy, Clone)]
@@ -101,7 +104,49 @@ impl CPU {
             RL(target) => self.rl(target),
             RRC(target) => self.rrc(target),
             RLC(target) => self.rlc(target),
+            SRA(target) => self.sra(target),
+            SLA(target) => self.sla(target),
+            SWAP(target) => self.swap(target),
         };
+    }
+
+    fn swap(&mut self, target: Arithmetic8BitTarget) {
+        // Swap bits 0-3 with 4-7
+        let value = self.read_8bit_register(&target);
+        let upper = value & 0b1111;
+        let lower = value >> 4;
+        let new_value = (upper << 4) | lower;
+
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.subtract = false;
+        self.registers.f.half_carry = false;
+        self.registers.f.carry = false;
+
+        self.modify_8bit_register(target, |_| new_value);
+    }
+
+    fn sra(&mut self, target: Arithmetic8BitTarget) {
+        let value = self.read_8bit_register(&target);
+        let new_value = (value as i8) >> 1;
+
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.subtract = false;
+        self.registers.f.half_carry = false;
+        self.registers.f.carry = (value & 0x01) != 0;
+
+        self.modify_8bit_register(target, |_| new_value as u8);
+    }
+
+    fn sla(&mut self, target: Arithmetic8BitTarget) {
+        let value = self.read_8bit_register(&target);
+        let new_value = value << 1;
+
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.subtract = false;
+        self.registers.f.half_carry = false;
+        self.registers.f.carry = (value & 0x80) != 0;
+
+        self.modify_8bit_register(target, |_| new_value);
     }
 
     fn rrc(&mut self, target: Arithmetic8BitTarget) {
