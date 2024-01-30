@@ -89,27 +89,28 @@ impl CPU {
             CP(target) => self.compare(target),
             INC(target) => self.increment(target),
             DEC(target) => self.decrement(target),
-            CCF(_) => self.set_unset(),
-            SCF(_) => self.set_carry(),
-            RRA => self.rra(),
-            RLA => self.rla(),
-            RRCA => self.rrca(),
-            RLCA => self.rlca(),
-            CPL => self.cpl(),
-            BIT(target, idx) => self.bit(target, idx),
-            RESET(target, idx) => self.reset(target, idx),
-            SET(target, idx) => self.set(target, idx),
-            SRL(target) => self.srl(target),
-            RR(target) => self.rr(target),
-            RL(target) => self.rl(target),
-            RRC(target) => self.rrc(target),
-            RLC(target) => self.rlc(target),
-            SRA(target) => self.sra(target),
-            SLA(target) => self.sla(target),
-            SWAP(target) => self.swap(target),
+            CCF(_) => self.set_unset(), // toggle carry flag
+            SCF(_) => self.set_carry(), // set carry flag to 1
+            RRA => self.rra(),          // rotate right & carry register A
+            RLA => self.rla(),          // rotate left & carry register A
+            RRCA => self.rrca(),        // rotate right without carry register A
+            RLCA => self.rlca(),        // rotate left without carry register A
+            CPL => self.cpl(),          // complement a (toggle all)
+            BIT(target, idx) => self.bit(target, idx), // check if bit is set
+            RESET(target, idx) => self.reset(target, idx), // set bit to 0
+            SET(target, idx) => self.set(target, idx), // set bit to 1
+            SRL(target) => self.srl(target), // shift right logical
+            RR(target) => self.rr(target), // rotate right & carry
+            RL(target) => self.rl(target), // rotate left & carry
+            RRC(target) => self.rrc(target), // rotate right without carry
+            RLC(target) => self.rlc(target), // rotate left without carry
+            SRA(target) => self.sra(target), // shift right arithmetically
+            SLA(target) => self.sla(target), // shift left arithmetically
+            SWAP(target) => self.swap(target), // swap upper & lower nibble
         };
     }
 
+    #[inline(always)]
     fn swap(&mut self, target: Arithmetic8BitTarget) {
         // Swap bits 0-3 with 4-7
         let value = self.read_8bit_register(&target);
@@ -125,6 +126,7 @@ impl CPU {
         self.modify_8bit_register(target, |_| new_value);
     }
 
+    #[inline(always)]
     fn sra(&mut self, target: Arithmetic8BitTarget) {
         let value = self.read_8bit_register(&target);
         let new_value = (value as i8) >> 1;
@@ -137,6 +139,7 @@ impl CPU {
         self.modify_8bit_register(target, |_| new_value as u8);
     }
 
+    #[inline(always)]
     fn sla(&mut self, target: Arithmetic8BitTarget) {
         let value = self.read_8bit_register(&target);
         let new_value = value << 1;
@@ -149,6 +152,7 @@ impl CPU {
         self.modify_8bit_register(target, |_| new_value);
     }
 
+    #[inline(always)]
     fn rrc(&mut self, target: Arithmetic8BitTarget) {
         let value = self.read_8bit_register(&target);
         let right_bit = 0b1 & value;
@@ -163,6 +167,7 @@ impl CPU {
         self.modify_8bit_register(target, |_| new_value);
     }
 
+    #[inline(always)]
     fn rlc(&mut self, target: Arithmetic8BitTarget) {
         let value = self.read_8bit_register(&target);
         let left_bit = 0b1000_0000 & value;
@@ -177,6 +182,7 @@ impl CPU {
         self.modify_8bit_register(target, |_| new_value);
     }
 
+    #[inline(always)]
     fn rl(&mut self, target: Arithmetic8BitTarget) {
         let value = self.read_8bit_register(&target);
         let left_bit = 0b1000_0000 & value;
@@ -193,6 +199,7 @@ impl CPU {
         self.modify_8bit_register(target, |_| new_value);
     }
 
+    #[inline(always)]
     fn rr(&mut self, target: Arithmetic8BitTarget) {
         let value = self.read_8bit_register(&target);
         let right_bit = 0b1 & value; // Save the last bit by using `and` with 0000_0001
@@ -209,6 +216,7 @@ impl CPU {
         self.modify_8bit_register(target, |_| new_value);
     }
 
+    #[inline(always)]
     fn srl(&mut self, target: Arithmetic8BitTarget) {
         let value = self.read_8bit_register(&target);
         let new_value = value >> 1;
@@ -221,6 +229,7 @@ impl CPU {
         self.registers.f.carry = (value & 0x01) != 0;
     }
 
+    #[inline(always)]
     fn set(&mut self, target: Arithmetic8BitTarget, idx: u8) {
         assert!(idx < 8);
 
@@ -231,6 +240,7 @@ impl CPU {
         self.modify_8bit_register(target, |_| new_value);
     }
 
+    #[inline(always)]
     fn reset(&mut self, target: Arithmetic8BitTarget, idx: u8) {
         assert!(idx < 8);
 
@@ -241,6 +251,7 @@ impl CPU {
         self.modify_8bit_register(target, |_| new_value);
     }
 
+    #[inline(always)]
     fn bit(&mut self, target: Arithmetic8BitTarget, idx: u8) {
         assert!(idx < 8);
 
@@ -254,6 +265,7 @@ impl CPU {
         // self.registers.f.carry N.A.
     }
 
+    #[inline(always)]
     fn cpl(&mut self) {
         // self.registers.f.zero N.A.
         self.registers.f.subtract = true; // Something something BCD
@@ -262,6 +274,7 @@ impl CPU {
         self.registers.a = !self.registers.a;
     }
 
+    #[inline(always)]
     fn rrca(&mut self) {
         let value = self.read_8bit_register(&Arithmetic8BitTarget::A);
         let right_bit = 0b1 & value; // Save the last bit by using `and` with 0000_0001
@@ -276,6 +289,7 @@ impl CPU {
         self.registers.a = new_value;
     }
 
+    #[inline(always)]
     fn rlca(&mut self) {
         let value = self.read_8bit_register(&Arithmetic8BitTarget::A);
         let left_bit = 0b1000_0000 & value; // Save the last bit by using `and` with 0000_0001
@@ -290,6 +304,7 @@ impl CPU {
         self.registers.a = new_value;
     }
 
+    #[inline(always)]
     fn rra(&mut self) {
         let value = self.read_8bit_register(&Arithmetic8BitTarget::A);
         let right_bit = 0b1 & value; // Save the last bit by using `and` with 0000_0001
@@ -307,6 +322,7 @@ impl CPU {
         self.registers.a = new_value;
     }
 
+    #[inline(always)]
     fn rla(&mut self) {
         let value = self.read_8bit_register(&Arithmetic8BitTarget::A);
         let left_bit = 0b1000_0000 & value;
@@ -323,12 +339,14 @@ impl CPU {
         self.registers.a = new_value;
     }
 
+    #[inline(always)]
     fn set_carry(&mut self) {
         self.registers.f.subtract = false;
         self.registers.f.half_carry = false;
         self.registers.f.carry = true;
     }
 
+    #[inline(always)]
     fn set_unset(&mut self) {
         self.registers.f.subtract = false;
         self.registers.f.half_carry = false;
