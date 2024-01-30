@@ -1,5 +1,5 @@
 use crate::cpu::Instruction::{
-    ADC, ADD, ADDHL, AND, CCF, CP, DEC, INC, OR, RLA, RLCA, RRA, RRA, RRCA, SBC, SCF, SUB,
+    ADC, ADD, ADDHL, AND, BIT, CCF, CP, CPL, DEC, INC, OR, RLA, RLCA, RRA, RRA, RRCA, SBC, SCF, SUB,
 };
 use crate::registers::Registers;
 
@@ -22,6 +22,7 @@ enum Instruction {
     RLA,
     RRCA,
     RLCA,
+    CPL,
 }
 
 #[derive(Copy, Clone)]
@@ -82,7 +83,30 @@ impl CPU {
             RLA => self.rla(),
             RRCA => self.rrca(),
             RLCA => self.rlca(),
+            CPL => self.cpl(),
+            BIT(target, idx) => self.bit(target, idx),
         };
+    }
+
+    fn bit(&mut self, target: Arithmetic8BitTarget, idx: u8) {
+        assert!(idx < 8 && idx >= 0);
+
+        let value = self.read_8bit_register(&target);
+        let mask = 1 << idx;
+        let bit = value & mask;
+
+        self.registers.f.zero = bit == 0;
+        self.registers.f.subtract = false;
+        self.registers.f.half_carry = true;
+        // self.registers.f.carry N.A.
+    }
+
+    fn cpl(&mut self) {
+        // self.registers.f.zero N.A.
+        self.registers.f.subtract = true; // Something something BCD
+        self.registers.f.half_carry = true; // Something something BCD
+                                            // self.registers.f.carry N.A.
+        self.registers.a = !self.registers.a;
     }
 
     fn rrca(&mut self) {
