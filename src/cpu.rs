@@ -1,4 +1,6 @@
-use crate::cpu::Instruction::{ADC, ADD, ADDHL, AND, CCF, CP, DEC, INC, OR, RRA, SBC, SCF, SUB};
+use crate::cpu::Instruction::{
+    ADC, ADD, ADDHL, AND, CCF, CP, DEC, INC, OR, RLA, RLCA, RRA, RRA, RRCA, SBC, SCF, SUB,
+};
 use crate::registers::Registers;
 
 // TODO fix linting issues
@@ -17,6 +19,9 @@ enum Instruction {
     CCF(Arithmetic8BitTarget),
     SCF(Arithmetic8BitTarget),
     RRA,
+    RLA,
+    RRCA,
+    RLCA,
 }
 
 #[derive(Copy, Clone)]
@@ -74,6 +79,9 @@ impl CPU {
             CCF(_) => self.set_unset(),
             SCF(_) => self.set_carry(),
             RRA => self.rra(),
+            RLA => self.rla(),
+            RRCA => self.rrca(),
+            RLCA => self.rlca(),
         };
     }
 
