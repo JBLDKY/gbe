@@ -1,6 +1,6 @@
 use crate::cpu::Instruction::{
-    ADC, ADD, ADDHL, AND, BIT, CCF, CP, CPL, DEC, INC, OR, RESET, RLA, RLCA, RRA, RRCA, SBC, SCF,
-    SET, SRL, SUB,
+    ADC, ADD, ADDHL, AND, BIT, CCF, CP, CPL, DEC, INC, OR, RESET, RL, RLA, RLC, RLCA, RR, RRA, RRC,
+    RRCA, SBC, SCF, SET, SRL, SUB,
 };
 use crate::registers::Registers;
 
@@ -28,6 +28,10 @@ enum Instruction {
     RESET(Arithmetic8BitTarget, u8),
     SET(Arithmetic8BitTarget, u8),
     SRL(Arithmetic8BitTarget),
+    RR(Arithmetic8BitTarget),
+    RL(Arithmetic8BitTarget),
+    RRC(Arithmetic8BitTarget),
+    RLC(Arithmetic8BitTarget),
 }
 
 #[derive(Copy, Clone)]
@@ -93,7 +97,71 @@ impl CPU {
             RESET(target, idx) => self.reset(target, idx),
             SET(target, idx) => self.set(target, idx),
             SRL(target) => self.srl(target),
+            RR(target) => self.rr(target),
+            RL(target) => self.rl(target),
+            RRC(target) => self.rrc(target),
+            RLC(target) => self.rlc(target),
         };
+    }
+
+    fn rrc(&mut self, target: Arithmetic8BitTarget) {
+        let value = self.read_8bit_register(&target);
+        let right_bit = 0b1 & value;
+
+        let new_value = value.rotate_right(1);
+
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.subtract = false;
+        self.registers.f.half_carry = false;
+        self.registers.f.carry = right_bit != 0;
+
+        self.modify_8bit_register(target, |_| new_value);
+    }
+
+    fn rlc(&mut self, target: Arithmetic8BitTarget) {
+        let value = self.read_8bit_register(&target);
+        let left_bit = 0b1000_0000 & value;
+
+        let new_value = value.rotate_left(1);
+
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.subtract = false;
+        self.registers.f.half_carry = false;
+        self.registers.f.carry = left_bit != 0;
+
+        self.modify_8bit_register(target, |_| new_value);
+    }
+
+    fn rl(&mut self, target: Arithmetic8BitTarget) {
+        let value = self.read_8bit_register(&target);
+        let left_bit = 0b1000_0000 & value;
+        let mut new_value = value.rotate_left(1);
+        if self.registers.f.carry == true {
+            new_value |= 0b0000_0001
+        }
+
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.subtract = false;
+        self.registers.f.half_carry = false;
+        self.registers.f.carry = left_bit != 0;
+
+        self.modify_8bit_register(target, |_| new_value);
+    }
+
+    fn rr(&mut self, target: Arithmetic8BitTarget) {
+        let value = self.read_8bit_register(&target);
+        let right_bit = 0b1 & value; // Save the last bit by using `and` with 0000_0001
+        let mut new_value = value.rotate_right(1); // rotate everything right
+        if self.registers.f.carry == true {
+            new_value |= 0b1000_0000 // add the carry flag to the 7th bit
+        }
+
+        self.registers.f.zero = new_value == 0; // result is never 0
+        self.registers.f.subtract = false; // we're not subtracting
+        self.registers.f.half_carry = false; // half carry is not applicable when accumulating
+        self.registers.f.carry = right_bit != 0; // save the right-most bit into the carry flag
+
+        self.modify_8bit_register(target, |_| new_value);
     }
 
     fn srl(&mut self, target: Arithmetic8BitTarget) {
