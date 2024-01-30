@@ -1,6 +1,6 @@
 use crate::cpu::Instruction::{
     ADC, ADD, ADDHL, AND, BIT, CCF, CP, CPL, DEC, INC, OR, RESET, RLA, RLCA, RRA, RRCA, SBC, SCF,
-    SUB,
+    SET, SUB,
 };
 use crate::registers::Registers;
 
@@ -26,6 +26,7 @@ enum Instruction {
     CPL,
     BIT(Arithmetic8BitTarget, u8),
     RESET(Arithmetic8BitTarget, u8),
+    SET(Arithmetic8BitTarget, u8),
 }
 
 #[derive(Copy, Clone)]
@@ -89,7 +90,18 @@ impl CPU {
             CPL => self.cpl(),
             BIT(target, idx) => self.bit(target, idx),
             RESET(target, idx) => self.reset(target, idx),
+            SET(target, idx) => self.set(target, idx),
         };
+    }
+
+    fn set(&mut self, target: Arithmetic8BitTarget, idx: u8) {
+        assert!(idx < 8);
+
+        let value = self.read_8bit_register(&target);
+        let mask = 1 << idx;
+        let new_value = value | mask;
+
+        self.modify_8bit_register(target, |_| new_value);
     }
 
     fn reset(&mut self, target: Arithmetic8BitTarget, idx: u8) {
@@ -97,9 +109,9 @@ impl CPU {
 
         let value = self.read_8bit_register(&target);
         let mask = !(1 << idx);
-        let bit = value ^ mask;
+        let new_value = value ^ mask;
 
-        self.modify_8bit_register(target, |_| bit);
+        self.modify_8bit_register(target, |_| new_value);
     }
 
     fn bit(&mut self, target: Arithmetic8BitTarget, idx: u8) {
