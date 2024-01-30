@@ -1,4 +1,4 @@
-use crate::cpu::Instruction::{ADC, ADD, ADDHL, AND, CCF, CP, DEC, INC, OR, SBC, SCF, SUB};
+use crate::cpu::Instruction::{ADC, ADD, ADDHL, AND, CCF, CP, DEC, INC, OR, RRA, SBC, SCF, SUB};
 use crate::registers::Registers;
 
 // TODO fix linting issues
@@ -16,6 +16,7 @@ enum Instruction {
     DEC(Arithmetic8BitTarget),
     CCF(Arithmetic8BitTarget),
     SCF(Arithmetic8BitTarget),
+    RRA,
 }
 
 #[derive(Copy, Clone)]
@@ -72,7 +73,25 @@ impl CPU {
             DEC(target) => self.decrement(target),
             CCF(_) => self.set_unset(),
             SCF(_) => self.set_carry(),
+            RRA => self.rra(),
         };
+    }
+
+    fn rra(&mut self) {
+        let value = self.read_8bit_register(&Arithmetic8BitTarget::A);
+        let right_bit = 0b1 & value; // Save the last bit by using `and` with 0000_0001
+        let mut new_value = value.rotate_right(1); // rotate everything right
+        if self.registers.f.carry == true {
+            // new_value = new_value + 128;
+            new_value |= 0b1000_0000 // add the carry flag to the 7th bit
+        }
+
+        self.registers.f.zero = false; // result is never 0
+        self.registers.f.subtract = false; // we're not subtracting
+        self.registers.f.half_carry = false; // half carry is not applicable when accumulating
+        self.registers.f.carry = right_bit != 0; // save the right-most bit into the carry flag
+
+        self.registers.a = new_value;
     }
 
     fn set_carry(&mut self) {

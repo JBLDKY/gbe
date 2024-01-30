@@ -3,10 +3,14 @@ mod flags_registers;
 mod registers;
 
 fn main() {
-    let a = 0b1111;
-    let value = 0b1111;
-    dbg!(0b10010 & 0x10);
-    ((a & 0xf) + (value & 0xf)) & 0x10
+    let a: u8 = 0b0000_1011;
+    let right = a.rotate_right(1);
+    println!("{}", format!("{right:b}"));
+
+    // println!(format!("{x:b}"), a.rotate_right(1).as_bytes());
+    // dbg!(a.overflowing_sub(b));
+    //
+    // dbg!(a.wrapping_sub(b));
 
     // Checking half-carry
     // ((a & 0xf) + (value & 0xf)) & 0x10
