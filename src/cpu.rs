@@ -77,6 +77,34 @@ impl CPU {
         };
     }
 
+    fn rrca(&mut self) {
+        let value = self.read_8bit_register(&Arithmetic8BitTarget::A);
+        let right_bit = 0b1 & value; // Save the last bit by using `and` with 0000_0001
+                                     //
+        let new_value = value.rotate_right(1); // rotate everything right
+
+        self.registers.f.zero = false; // result is never 0
+        self.registers.f.subtract = false; // we're not subtracting
+        self.registers.f.half_carry = false; // half carry is not applicable when accumulating
+        self.registers.f.carry = right_bit != 0; // save the right-most bit into the carry flag
+
+        self.registers.a = new_value;
+    }
+
+    fn rlca(&mut self) {
+        let value = self.read_8bit_register(&Arithmetic8BitTarget::A);
+        let left_bit = 0b1000_0000 & value; // Save the last bit by using `and` with 0000_0001
+                                            //
+        let new_value = value.rotate_left(1); // rotate everything left
+
+        self.registers.f.zero = false; // result is never 0
+        self.registers.f.subtract = false; // we're not subtracting
+        self.registers.f.half_carry = false; // half carry is not applicable when accumulating
+        self.registers.f.carry = left_bit != 0; // save the left-most bit into the carry flag
+
+        self.registers.a = new_value;
+    }
+
     fn rra(&mut self) {
         let value = self.read_8bit_register(&Arithmetic8BitTarget::A);
         let right_bit = 0b1 & value; // Save the last bit by using `and` with 0000_0001
@@ -90,6 +118,22 @@ impl CPU {
         self.registers.f.subtract = false; // we're not subtracting
         self.registers.f.half_carry = false; // half carry is not applicable when accumulating
         self.registers.f.carry = right_bit != 0; // save the right-most bit into the carry flag
+
+        self.registers.a = new_value;
+    }
+
+    fn rla(&mut self) {
+        let value = self.read_8bit_register(&Arithmetic8BitTarget::A);
+        let left_bit = 0b1000_0000 & value;
+        let mut new_value = value.rotate_left(1);
+        if self.registers.f.carry == true {
+            new_value |= 0b0000_0001
+        }
+
+        self.registers.f.zero = false;
+        self.registers.f.subtract = false;
+        self.registers.f.half_carry = false;
+        self.registers.f.carry = left_bit != 0;
 
         self.registers.a = new_value;
     }
