@@ -1,63 +1,22 @@
-use crate::cpu::Instruction::{
-    ADC, ADD, ADDHL, AND, BIT, CCF, CP, CPL, DEC, INC, OR, RESET, RL, RLA, RLC, RLCA, RR, RRA, RRC,
-    RRCA, SBC, SCF, SET, SLA, SRA, SRL, SUB, SWAP,
+use crate::instruction::Arithmetic16BitTarget;
+use crate::instruction::Arithmetic8BitTarget;
+use crate::instruction::Instruction;
+use crate::instruction::Instruction::{
+    ADC, ADD, ADDHL, ADDHLI, AND, BIT, CCF, CP, CPL, DEC, INC, OR, RESET, RL, RLA, RLC, RLCA, RR,
+    RRA, RRC, RRCA, SBC, SCF, SET, SLA, SRA, SRL, SUB, SWAP, XOR,
 };
 use crate::registers::Registers;
 
-// TODO fix linting issues
 #[allow(dead_code)]
-enum Instruction {
-    ADD(Arithmetic8BitTarget),
-    ADC(Arithmetic8BitTarget),
-    ADDHL(Arithmetic16BitTarget),
-    SUB(Arithmetic8BitTarget),
-    SBC(Arithmetic8BitTarget),
-    AND(Arithmetic8BitTarget),
-    OR(Arithmetic8BitTarget),
-    CP(Arithmetic8BitTarget),
-    INC(Arithmetic8BitTarget),
-    DEC(Arithmetic8BitTarget),
-    CCF(Arithmetic8BitTarget),
-    SCF(Arithmetic8BitTarget),
-    RRA,
-    RLA,
-    RRCA,
-    RLCA,
-    CPL,
-    BIT(Arithmetic8BitTarget, u8),
-    RESET(Arithmetic8BitTarget, u8),
-    SET(Arithmetic8BitTarget, u8),
-    SRL(Arithmetic8BitTarget),
-    RR(Arithmetic8BitTarget),
-    RL(Arithmetic8BitTarget),
-    RRC(Arithmetic8BitTarget),
-    RLC(Arithmetic8BitTarget),
-    SRA(Arithmetic8BitTarget),
-    SLA(Arithmetic8BitTarget),
-    SWAP(Arithmetic8BitTarget),
+struct MemoryBus {
+    memory: [u8; 0xFFFF],
 }
 
-#[derive(Copy, Clone)]
 #[allow(dead_code)]
-enum Arithmetic16BitTarget {
-    HL,
-    BC,
-    SP,
-    DE,
-}
-
-#[derive(Copy, Clone)]
-#[allow(dead_code)]
-enum Arithmetic8BitTarget {
-    A,
-    B,
-    C,
-    D,
-    E,
-    F,
-    H,
-    L,
-    D8,
+impl MemoryBus {
+    fn read_byte(&self, address: u16) -> u8 {
+        self.memory[address as usize]
+    }
 }
 
 #[allow(dead_code)]
@@ -77,15 +36,21 @@ impl CPU {
         }
     }
 
+    // fn step(&mut self) {
+    //     let mut instruction_byte = self.bus.read_byte(self.pc);
+    // }
+
     fn exec(&mut self, instruction: Instruction) {
         match instruction {
             ADD(target) => self.add(target),
+            ADDHLI(target) => self.addhli(target),
             ADC(target) => self.add_with_carry(target),
             ADDHL(target) => self.add_hl(target),
             SUB(target) => self.subtract(target),
             SBC(target) => self.subtract_with_carry(target),
             AND(target) => self.and(target),
             OR(target) => self.or(target),
+            XOR(target) => self.xor(target),
             CP(target) => self.compare(target),
             INC(target) => self.increment(target),
             DEC(target) => self.decrement(target),
@@ -494,30 +459,29 @@ impl CPU {
 
     #[inline(always)]
     fn add(&mut self, target: Arithmetic8BitTarget) {
-        // TODO: Implement ADD for SP, i8
-        // TODO: Implement ADD for HL
-
-        // read a value from the register
         let value = self.read_8bit_register(&target);
 
         let new_value = self.registers.a.wrapping_add(value);
 
-        // Remember to set the flags
         self.registers.f.zero = new_value == 0;
         self.registers.f.subtract = false;
 
-        // The half-carry flag is checked during addition to see if there's a carry from the 4th bit to the 5th bit.
-        // It is used for BCD (Binary Coded Decimal) operations. The half-carry is set if the addition
-        // of the lower nibbles (4 bits) of the accumulator and the value is greater than 0xf, indicating
-        // an overflow from the lower nibble to the upper nibble. We use `0x10` to check the 5th bit because
-        // if this bit is set, it indicates the lower nibble overflowed after addition.
-        // Example: If the lower nibble of `a` is `0b1111` (0xF) and we add `0b0001` (1) to it,
-        // the result is `0b1 0000` (0x10), which sets the 5th bit, indicating a half-carry.
         self.registers.f.half_carry = ((self.registers.a & 0xf) + (value & 0xf)) & 0x10 == 0x10;
 
-        // Update register `a`
-        // I guess this function will only handle adding for register `a`
-        // SP, DE, R8, BC might need to be handled elsewhere
+        self.registers.a = new_value;
+    }
+
+    #[inline(always)]
+    fn addhli(&mut self, target: Arithmetic8BitTarget) {
+        let value = self.registers.get_hl();
+
+        let new_value = self.registers.a.wrapping_add(value);
+
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.subtract = false;
+
+        self.registers.f.half_carry = ((self.registers.a & 0xf) + (value & 0xf)) & 0x10 == 0x10;
+
         self.registers.a = new_value;
     }
 
