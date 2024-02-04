@@ -31,7 +31,9 @@ pub enum Instruction {
     SUB(Arithmetic8BitTarget),
     SubHli,
     SBC(Arithmetic8BitTarget),
+    SbcHli,
     AND(Arithmetic8BitTarget),
+    AndHli,
     OR(Arithmetic8BitTarget),
     XOR(Arithmetic8BitTarget),
     CP(Arithmetic8BitTarget),
@@ -115,6 +117,8 @@ impl Instruction {
             0x8c => Some(Instruction::ADC(Arithmetic8BitTarget::H)),
             0x8d => Some(Instruction::ADC(Arithmetic8BitTarget::L)),
             0xce => Some(Instruction::ADC(Arithmetic8BitTarget::D8)),
+
+            // Subtract memory address value in HL from a
             0x8e => Some(Instruction::AdcHli),
 
             // Subtract
@@ -137,8 +141,10 @@ impl Instruction {
             0x9b => Some(Instruction::SBC(Arithmetic8BitTarget::E)),
             0x9c => Some(Instruction::SBC(Arithmetic8BitTarget::H)),
             0x9d => Some(Instruction::SBC(Arithmetic8BitTarget::L)),
-            // 0x9e => Some(Instruction::SBC(Arithmetic8BitTarget::HLI)),
             0xde => Some(Instruction::SBC(Arithmetic8BitTarget::D8)),
+
+            // Subtract memory address value in HL from a with carry
+            0x9e => Some(Instruction::SbcHli),
 
             0xa7 => Some(Instruction::AND(Arithmetic8BitTarget::A)),
             0xa0 => Some(Instruction::AND(Arithmetic8BitTarget::B)),
@@ -147,8 +153,10 @@ impl Instruction {
             0xa3 => Some(Instruction::AND(Arithmetic8BitTarget::E)),
             0xa4 => Some(Instruction::AND(Arithmetic8BitTarget::H)),
             0xa5 => Some(Instruction::AND(Arithmetic8BitTarget::L)),
-            // 0xa6 => Some(Instruction::AND(Arithmetic8BitTarget::HLI)),
             0xe6 => Some(Instruction::AND(Arithmetic8BitTarget::D8)),
+
+            // Logical AND with memory address value in HL
+            0xa6 => Some(Instruction::AndHli),
 
             0xb7 => Some(Instruction::OR(Arithmetic8BitTarget::A)),
             0xb0 => Some(Instruction::OR(Arithmetic8BitTarget::B)),

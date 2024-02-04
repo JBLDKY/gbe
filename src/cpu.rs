@@ -2,8 +2,8 @@ use crate::instruction::Arithmetic16BitTarget;
 use crate::instruction::Arithmetic8BitTarget;
 use crate::instruction::Instruction;
 use crate::instruction::Instruction::{
-    AdcHli, AddHli, SubHli, ADC, ADD, ADDHL, AND, BIT, CCF, CP, CPL, DEC, INC, OR, RESET, RL, RLA,
-    RLC, RLCA, RR, RRA, RRC, RRCA, SBC, SCF, SET, SLA, SRA, SRL, SUB, SWAP, XOR,
+    AdcHli, AddHli, AndHli, SbcHli, SubHli, ADC, ADD, ADDHL, AND, BIT, CCF, CP, CPL, DEC, INC, OR,
+    RESET, RL, RLA, RLC, RLCA, RR, RRA, RRC, RRCA, SBC, SCF, SET, SLA, SRA, SRL, SUB, SWAP, XOR,
 };
 use crate::registers::Registers;
 
@@ -58,7 +58,9 @@ impl CPU {
             SUB(target) => self.subtract(target),
             SubHli => self.subtract_hli(),
             SBC(target) => self.subtract_with_carry(target),
+            SbcHli => self.subtract_with_carry_hli(),
             AND(target) => self.and(target),
+            AndHli => self.and_hli(),
             OR(target) => self.or(target),
             XOR(target) => self.xor(target),
             CP(target) => self.compare(target),
@@ -83,6 +85,36 @@ impl CPU {
             SLA(target) => self.sla(target), // shift left arithmetically
             SWAP(target) => self.swap(target), // swap upper & lower nibble
         };
+    }
+
+    #[inline(always)]
+    fn and_hli(&mut self) {
+        let address = self.registers.get_hl();
+        let value = self.mem.read(address);
+        let new_value = self.registers.a & value;
+
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.subtract = false;
+        self.registers.f.half_carry = true;
+        self.registers.f.carry = false;
+    }
+
+    #[inline(always)]
+    fn subtract_with_carry_hli(&mut self) {
+        let address = self.registers.get_hl();
+        let value = self.mem.read(address);
+        let (new_value, overflow) = self
+            .registers
+            .a
+            .overflowing_sub(value + self.registers.f.carry as u8);
+
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.subtract = true;
+        self.registers.f.half_carry =
+            (self.registers.a & 0xf) < ((value & 0xf) + self.registers.f.carry as u8);
+        self.registers.f.carry = overflow;
+
+        self.registers.a = new_value;
     }
 
     #[inline(always)]
@@ -453,7 +485,6 @@ impl CPU {
 
     #[inline(always)]
     fn and(&mut self, target: Arithmetic8BitTarget) {
-        // TODO implement ADD for HL
         let new_value = self.registers.a & self.read_8bit_register(&target);
         self.registers.f.zero = new_value == 0;
         self.registers.f.subtract = false;
