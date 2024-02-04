@@ -104,6 +104,7 @@ pub enum Instruction {
     PUSH(StackTarget),
     POP(StackTarget),
     CALL(JumpCondition),
+    RET(JumpCondition),
 }
 
 #[allow(dead_code)]
@@ -632,17 +633,20 @@ impl Instruction {
             0xf1 => Some(Instruction::POP(StackTarget::AF)),
 
             // Push but with conditions.
-            0xc5 => Some(Instruction::CALL(JumpCondition::NotZero)),
+            0xc4 => Some(Instruction::CALL(JumpCondition::NotZero)),
             0xd4 => Some(Instruction::CALL(JumpCondition::NotCarry)),
             0xcc => Some(Instruction::CALL(JumpCondition::Zero)),
             0xdc => Some(Instruction::CALL(JumpCondition::Carry)),
             0xcd => Some(Instruction::CALL(JumpCondition::Unconditional)),
 
-            // 0xc0 => Some(Instruction::RET(JumpTest::NotZero)),
-            // 0xd0 => Some(Instruction::RET(JumpTest::NotCarry)),
-            // 0xc8 => Some(Instruction::RET(JumpTest::Zero)),
-            // 0xd8 => Some(Instruction::RET(JumpTest::Carry)),
-            // 0xc9 => Some(Instruction::RET(JumpTest::Always)),
+            // Pop the top of the stack into the program counter (Also known as returning)
+            0xc0 => Some(Instruction::RET(JumpCondition::NotZero)),
+            0xd0 => Some(Instruction::RET(JumpCondition::NotCarry)),
+            0xc8 => Some(Instruction::RET(JumpCondition::Zero)),
+            0xd8 => Some(Instruction::RET(JumpCondition::Carry)),
+            0xc9 => Some(Instruction::RET(JumpCondition::Unconditional)),
+
+            // RET with the HL register
             // 0xd9 => Some(Instruction::RETI),
 
             // 0xc7 => Some(Instruction::RST(RSTLocation::X00)),

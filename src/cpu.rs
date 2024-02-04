@@ -4,8 +4,8 @@ use crate::instruction::Arithmetic8BitTarget;
 use crate::instruction::Instruction;
 use crate::instruction::Instruction::{
     AdcHli, AddHli, AndHli, CpHli, JpHli, OrHli, SbcHli, SubHli, XorHli, ADC, ADD, ADDHL, ADDSPN,
-    AND, BIT, CALL, CCF, CP, CPL, DAA, DEC, INC, JP, JR, OR, POP, PUSH, RESET, RL, RLA, RLC, RLCA,
-    RR, RRA, RRC, RRCA, SBC, SCF, SET, SLA, SRA, SRL, SUB, SWAP, XOR,
+    AND, BIT, CALL, CCF, CP, CPL, DAA, DEC, INC, JP, JR, OR, POP, PUSH, RESET, RET, RL, RLA, RLC,
+    RLCA, RR, RRA, RRC, RRCA, SBC, SCF, SET, SLA, SRA, SRL, SUB, SWAP, XOR,
 };
 use crate::instruction::JumpCondition;
 use crate::instruction::StackTarget;
@@ -107,6 +107,7 @@ impl CPU {
             JP(condition) => self.jump(condition),     // Jump to
             JR(condition) => self.jump_relative(condition), // jump relative from PC
             JpHli => self.jump_hli(),                  // jump to address in HL
+            // Move this shit
             PUSH(target) => {
                 let value = match target {
                     StackTarget::AF => self.registers.get_af(),
@@ -117,9 +118,43 @@ impl CPU {
 
                 self.push(value);
             } // Push onto stack one of the 16 bit registers
-            POP(target) => self.pop(target), // Pop from stack into one of the 16 bit registers
+            POP(target) => {
+                let popped = self.pop();
+                match target {
+                    StackTarget::AF => self.registers.set_af(popped),
+                    StackTarget::BC => self.registers.set_bc(popped),
+                    StackTarget::DE => self.registers.set_de(popped),
+                    StackTarget::HL => self.registers.set_hl(popped),
+                }
+            }
             CALL(condition) => self.call(condition), // jump relative from PC
+            RET(condition) => self.r#return(condition), // Pop the top of the stack basically
+                                                      // returning
         };
+    }
+
+    #[inline(always)]
+    fn r#return(&mut self, condition: JumpCondition) {
+        match condition {
+            JumpCondition::Zero if !self.registers.f.zero => {
+                let _ = self.pc.wrapping_add(1);
+                return;
+            }
+            JumpCondition::Carry if !self.registers.f.carry => {
+                let _ = self.pc.wrapping_add(1);
+                return;
+            }
+            JumpCondition::NotZero if self.registers.f.zero => {
+                let _ = self.pc.wrapping_add(1);
+                return;
+            }
+            JumpCondition::NotCarry if self.registers.f.carry => {
+                let _ = self.pc.wrapping_add(1);
+                return;
+            }
+            _ => {}
+        }
+        self.pop();
     }
 
     #[inline(always)]
@@ -153,7 +188,7 @@ impl CPU {
     }
 
     #[inline(always)]
-    fn pop(&mut self, target: StackTarget) {
+    fn pop(&mut self) -> u16 {
         // Might need to swap lower and upper
         let upper = self.mem.read(self.sp) as u16;
         self.sp = self.sp.wrapping_add(1);
@@ -161,14 +196,7 @@ impl CPU {
         let lower = self.mem.read(self.sp) as u16;
         self.sp = self.sp.wrapping_add(1);
 
-        let value = (upper << 8) | lower;
-
-        match target {
-            StackTarget::AF => self.registers.set_af(value),
-            StackTarget::BC => self.registers.set_bc(value),
-            StackTarget::DE => self.registers.set_de(value),
-            StackTarget::HL => self.registers.set_hl(value),
-        };
+        (upper << 8) | lower
     }
 
     fn jump_hli(&self) {
