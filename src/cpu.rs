@@ -4,11 +4,13 @@ use crate::instruction::Arithmetic8BitTarget;
 use crate::instruction::Instruction;
 use crate::instruction::Instruction::{
     AdcHli, AddHli, AndHli, CpHli, JpHli, OrHli, SbcHli, SubHli, XorHli, ADC, ADD, ADDHL, ADDSPN,
-    AND, BIT, CALL, CCF, CP, CPL, DAA, DEC, DI, EI, HALT, INC, JP, JR, NOP, OR, POP, PUSH, RESET,
-    RET, RETI, RL, RLA, RLC, RLCA, RR, RRA, RRC, RRCA, RST, SBC, SCF, SET, SLA, SRA, SRL, SUB,
-    SWAP, XOR,
+    AND, BIT, CALL, CCF, CP, CPL, DAA, DEC, DI, EI, HALT, INC, JP, JR, LD, NOP, OR, POP, PUSH,
+    RESET, RET, RETI, RL, RLA, RLC, RLCA, RR, RRA, RRC, RRCA, RST, SBC, SCF, SET, SLA, SRA, SRL,
+    SUB, SWAP, XOR,
 };
 use crate::instruction::JumpCondition;
+use crate::instruction::LoadTarget;
+use crate::instruction::LoadVariant;
 use crate::instruction::PrefixTarget;
 use crate::instruction::StackTarget;
 use crate::registers::Registers;
@@ -162,6 +164,9 @@ impl CPU {
                 // self.interrupts_enabled = true;
                 (self.pc.wrapping_add(1), 4);
             }
+            LD(variant) => match variant {
+                _ => unimplemented!(),
+            },
         }
     }
 

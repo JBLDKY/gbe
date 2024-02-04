@@ -177,6 +177,45 @@ pub enum Instruction {
     HALT,
     EI,
     DI,
+    LD(LoadVariant),
+}
+
+#[derive(Copy, Clone)]
+#[allow(dead_code)]
+pub enum LoadTarget {
+    A,
+    B,
+    C,
+    D,
+    E,
+    H,
+    L,
+    HLI,
+    BC,
+    DE,
+    HL,
+}
+
+#[derive(Copy, Clone)]
+#[allow(dead_code)]
+pub enum LoadVariant {
+    RegToReg(LoadTarget, LoadTarget),
+    MemToReg(LoadTarget, u16),    // Memory address to LoadTarget
+    RegToMem(u16, LoadTarget),    // LoadTarget to Memory address
+    ImmToReg(LoadTarget),         // Immediate value to LoadTarget
+    ImmToMem(u16, u8),            // Immediate value to Memory address
+    ImmToMemIndirect(LoadTarget), // Immediate value to Indirect Memory
+    RegToRegIndirect(LoadTarget, LoadTarget), // LoadTarget to indirect address of another LoadTarget
+    MemIndirectToReg(LoadTarget, LoadTarget), // Memory indirect through LoadTarget to LoadTarget
+    MemIndirectToRegIncHL(LoadTarget, LoadTarget), // Memory indirect (HL incremented) to Register
+    MemIndirectToRegDecHL(LoadTarget, LoadTarget), // Memory indirect (HL decremented) to Register
+    RegToMemIndirect(LoadTarget, LoadTarget),
+    RegToMemIndirectInc(LoadTarget, LoadTarget),
+    RegToMemIndirectDec(LoadTarget, LoadTarget),
+    MemOffsetToReg(LoadTarget),
+    RegToMemOffset(LoadTarget),
+    MemToRegA16(LoadTarget),
+    RegAToMemA16(LoadTarget),
 }
 
 #[allow(dead_code)]
@@ -349,349 +388,6 @@ impl Instruction {
             // Jump to the memory address relative to the current one.
             0xe9 => Some(Instruction::JpHli),
 
-            // 0xf2 => Some(Instruction::LD(LoadType::AFromIndirect(
-            //     Indirect::LastByteIndirect,
-            // ))),
-            // 0x0a => Some(Instruction::LD(LoadType::AFromIndirect(
-            //     Indirect::BCIndirect,
-            // ))),
-            // 0x1a => Some(Instruction::LD(LoadType::AFromIndirect(
-            //     Indirect::DEIndirect,
-            // ))),
-            // 0x2a => Some(Instruction::LD(LoadType::AFromIndirect(
-            //     Indirect::HLIndirectPlus,
-            // ))),
-            // 0x3a => Some(Instruction::LD(LoadType::AFromIndirect(
-            //     Indirect::HLIndirectMinus,
-            // ))),
-            // 0xfa => Some(Instruction::LD(LoadType::AFromIndirect(
-            //     Indirect::WordIndirect,
-            // ))),
-            //
-            // 0xe2 => Some(Instruction::LD(LoadType::IndirectFromA(
-            //     Indirect::LastByteIndirect,
-            // ))),
-            // 0x02 => Some(Instruction::LD(LoadType::IndirectFromA(
-            //     Indirect::BCIndirect,
-            // ))),
-            // 0x12 => Some(Instruction::LD(LoadType::IndirectFromA(
-            //     Indirect::DEIndirect,
-            // ))),
-            // 0x22 => Some(Instruction::LD(LoadType::IndirectFromA(
-            //     Indirect::HLIndirectPlus,
-            // ))),
-            // 0x32 => Some(Instruction::LD(LoadType::IndirectFromA(
-            //     Indirect::HLIndirectMinus,
-            // ))),
-            // 0xea => Some(Instruction::LD(LoadType::IndirectFromA(
-            //     Indirect::WordIndirect,
-            // ))),
-            //
-            // 0x01 => Some(Instruction::LD(LoadType::Word(LoadWordTarget::BC))),
-            // 0x11 => Some(Instruction::LD(LoadType::Word(LoadWordTarget::DE))),
-            // 0x21 => Some(Instruction::LD(LoadType::Word(LoadWordTarget::HL))),
-            // 0x31 => Some(Instruction::LD(LoadType::Word(LoadWordTarget::SP))),
-            //
-            // 0x40 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::B,
-            //     LoadByteSource::B,
-            // ))),
-            // 0x41 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::B,
-            //     LoadByteSource::C,
-            // ))),
-            // 0x42 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::B,
-            //     LoadByteSource::D,
-            // ))),
-            // 0x43 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::B,
-            //     LoadByteSource::E,
-            // ))),
-            // 0x44 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::B,
-            //     LoadByteSource::H,
-            // ))),
-            // 0x45 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::B,
-            //     LoadByteSource::L,
-            // ))),
-            // 0x46 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::B,
-            //     LoadByteSource::HLI,
-            // ))),
-            // 0x47 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::B,
-            //     LoadByteSource::A,
-            // ))),
-            //
-            // 0x48 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::C,
-            //     LoadByteSource::B,
-            // ))),
-            // 0x49 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::C,
-            //     LoadByteSource::C,
-            // ))),
-            // 0x4a => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::C,
-            //     LoadByteSource::D,
-            // ))),
-            // 0x4b => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::C,
-            //     LoadByteSource::E,
-            // ))),
-            // 0x4c => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::C,
-            //     LoadByteSource::H,
-            // ))),
-            // 0x4d => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::C,
-            //     LoadByteSource::L,
-            // ))),
-            // 0x4e => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::C,
-            //     LoadByteSource::HLI,
-            // ))),
-            // 0x4f => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::C,
-            //     LoadByteSource::A,
-            // ))),
-            //
-            // 0x50 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::D,
-            //     LoadByteSource::B,
-            // ))),
-            // 0x51 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::D,
-            //     LoadByteSource::C,
-            // ))),
-            // 0x52 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::D,
-            //     LoadByteSource::D,
-            // ))),
-            // 0x53 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::D,
-            //     LoadByteSource::E,
-            // ))),
-            // 0x54 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::D,
-            //     LoadByteSource::H,
-            // ))),
-            // 0x55 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::D,
-            //     LoadByteSource::L,
-            // ))),
-            // 0x56 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::D,
-            //     LoadByteSource::HLI,
-            // ))),
-            // 0x57 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::D,
-            //     LoadByteSource::A,
-            // ))),
-            //
-            // 0x58 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::E,
-            //     LoadByteSource::B,
-            // ))),
-            // 0x59 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::E,
-            //     LoadByteSource::C,
-            // ))),
-            // 0x5a => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::E,
-            //     LoadByteSource::D,
-            // ))),
-            // 0x5b => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::E,
-            //     LoadByteSource::E,
-            // ))),
-            // 0x5c => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::E,
-            //     LoadByteSource::H,
-            // ))),
-            // 0x5d => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::E,
-            //     LoadByteSource::L,
-            // ))),
-            // 0x5e => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::E,
-            //     LoadByteSource::HLI,
-            // ))),
-            // 0x5f => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::E,
-            //     LoadByteSource::A,
-            // ))),
-            //
-            // 0x60 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::H,
-            //     LoadByteSource::B,
-            // ))),
-            // 0x61 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::H,
-            //     LoadByteSource::C,
-            // ))),
-            // 0x62 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::H,
-            //     LoadByteSource::D,
-            // ))),
-            // 0x63 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::H,
-            //     LoadByteSource::E,
-            // ))),
-            // 0x64 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::H,
-            //     LoadByteSource::H,
-            // ))),
-            // 0x65 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::H,
-            //     LoadByteSource::L,
-            // ))),
-            // 0x66 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::H,
-            //     LoadByteSource::HLI,
-            // ))),
-            // 0x67 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::H,
-            //     LoadByteSource::A,
-            // ))),
-            //
-            // 0x68 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::L,
-            //     LoadByteSource::B,
-            // ))),
-            // 0x69 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::L,
-            //     LoadByteSource::C,
-            // ))),
-            // 0x6a => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::L,
-            //     LoadByteSource::D,
-            // ))),
-            // 0x6b => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::L,
-            //     LoadByteSource::E,
-            // ))),
-            // 0x6c => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::L,
-            //     LoadByteSource::H,
-            // ))),
-            // 0x6d => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::L,
-            //     LoadByteSource::L,
-            // ))),
-            // 0x6e => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::L,
-            //     LoadByteSource::HLI,
-            // ))),
-            // 0x6f => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::L,
-            //     LoadByteSource::A,
-            // ))),
-            //
-            // 0x70 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::HLI,
-            //     LoadByteSource::B,
-            // ))),
-            // 0x71 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::HLI,
-            //     LoadByteSource::C,
-            // ))),
-            // 0x72 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::HLI,
-            //     LoadByteSource::D,
-            // ))),
-            // 0x73 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::HLI,
-            //     LoadByteSource::E,
-            // ))),
-            // 0x74 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::HLI,
-            //     LoadByteSource::H,
-            // ))),
-            // 0x75 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::HLI,
-            //     LoadByteSource::L,
-            // ))),
-            // 0x77 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::HLI,
-            //     LoadByteSource::A,
-            // ))),
-            //
-            // 0x78 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::A,
-            //     LoadByteSource::B,
-            // ))),
-            // 0x79 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::A,
-            //     LoadByteSource::C,
-            // ))),
-            // 0x7a => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::A,
-            //     LoadByteSource::D,
-            // ))),
-            // 0x7b => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::A,
-            //     LoadByteSource::E,
-            // ))),
-            // 0x7c => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::A,
-            //     LoadByteSource::H,
-            // ))),
-            // 0x7d => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::A,
-            //     LoadByteSource::L,
-            // ))),
-            // 0x7e => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::A,
-            //     LoadByteSource::HLI,
-            // ))),
-            // 0x7f => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::A,
-            //     LoadByteSource::A,
-            // ))),
-            //
-            // 0x3e => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::A,
-            //     LoadByteSource::D8,
-            // ))),
-            // 0x06 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::B,
-            //     LoadByteSource::D8,
-            // ))),
-            // 0x0e => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::C,
-            //     LoadByteSource::D8,
-            // ))),
-            // 0x16 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::D,
-            //     LoadByteSource::D8,
-            // ))),
-            // 0x1e => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::E,
-            //     LoadByteSource::D8,
-            // ))),
-            // 0x26 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::H,
-            //     LoadByteSource::D8,
-            // ))),
-            // 0x2e => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::L,
-            //     LoadByteSource::D8,
-            // ))),
-            // 0x36 => Some(Instruction::LD(LoadType::Byte(
-            //     LoadByteTarget::HLI,
-            //     LoadByteSource::D8,
-            // ))),
-
-            // 0xe0 => Some(Instruction::LD(LoadType::ByteAddressFromA)),
-            // 0xf0 => Some(Instruction::LD(LoadType::AFromByteAddress)),
-
-            // 0x08 => Some(Instruction::LD(LoadType::IndirectFromSP)),
-            // 0xf9 => Some(Instruction::LD(LoadType::SPFromHL)),
-            // 0xf8 => Some(Instruction::LD(LoadType::HLFromSPN)),
-
             // Push one of the 16 bit registers onto the stack.
             0xc5 => Some(Instruction::PUSH(StackTarget::BC)),
             0xd5 => Some(Instruction::PUSH(StackTarget::DE)),
@@ -742,6 +438,363 @@ impl Instruction {
 
             // (Enable Interrupts): Enables interrupts, allowing the CPU to respond to interrupt requests.
             0xfb => Some(Instruction::EI),
+
+            // LOAD INSTRUCTIONR BELOW
+            0x0a => Some(Instruction::LD(LoadVariant::MemIndirectToReg(
+                LoadTarget::BC,
+                LoadTarget::A,
+            ))),
+            0x1a => Some(Instruction::LD(LoadVariant::MemIndirectToReg(
+                LoadTarget::DE,
+                LoadTarget::A,
+            ))),
+            0x2a => Some(Instruction::LD(LoadVariant::MemIndirectToRegIncHL(
+                LoadTarget::HL,
+                LoadTarget::A,
+            ))),
+            0x3a => Some(Instruction::LD(LoadVariant::MemIndirectToRegDecHL(
+                LoadTarget::HL,
+                LoadTarget::A,
+            ))),
+
+            0x7F => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::A,
+                LoadTarget::A,
+            ))),
+
+            0x6F => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::L,
+                LoadTarget::A,
+            ))),
+
+            0x5F => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::E,
+                LoadTarget::A,
+            ))),
+
+            0x4F => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::C,
+                LoadTarget::A,
+            ))),
+
+            0x7D => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::A,
+                LoadTarget::L,
+            ))),
+
+            0x6D => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::L,
+                LoadTarget::L,
+            ))),
+
+            0x5D => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::E,
+                LoadTarget::L,
+            ))),
+
+            0x4D => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::C,
+                LoadTarget::L,
+            ))),
+
+            0x7C => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::A,
+                LoadTarget::H,
+            ))),
+
+            0x6C => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::L,
+                LoadTarget::H,
+            ))),
+
+            0x5C => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::E,
+                LoadTarget::H,
+            ))),
+
+            0x4C => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::C,
+                LoadTarget::H,
+            ))),
+
+            0x7B => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::A,
+                LoadTarget::E,
+            ))),
+
+            0x6B => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::L,
+                LoadTarget::E,
+            ))),
+
+            0x5B => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::E,
+                LoadTarget::E,
+            ))),
+
+            0x4B => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::C,
+                LoadTarget::E,
+            ))),
+
+            0x7A => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::A,
+                LoadTarget::D,
+            ))),
+
+            0x6A => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::L,
+                LoadTarget::D,
+            ))),
+
+            0x5A => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::E,
+                LoadTarget::D,
+            ))),
+
+            0x4A => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::C,
+                LoadTarget::D,
+            ))),
+
+            0x79 => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::A,
+                LoadTarget::C,
+            ))),
+
+            0x69 => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::L,
+                LoadTarget::C,
+            ))),
+
+            0x59 => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::E,
+                LoadTarget::C,
+            ))),
+
+            0x49 => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::C,
+                LoadTarget::C,
+            ))),
+
+            0x78 => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::A,
+                LoadTarget::B,
+            ))),
+
+            0x68 => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::L,
+                LoadTarget::B,
+            ))),
+
+            0x58 => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::E,
+                LoadTarget::B,
+            ))),
+
+            0x48 => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::C,
+                LoadTarget::B,
+            ))),
+
+            0x67 => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::H,
+                LoadTarget::A,
+            ))),
+
+            0x57 => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::D,
+                LoadTarget::A,
+            ))),
+
+            0x47 => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::B,
+                LoadTarget::A,
+            ))),
+
+            0x66 => Some(Instruction::LD(LoadVariant::MemIndirectToReg(
+                LoadTarget::H,
+                LoadTarget::HLI,
+            ))),
+
+            0x56 => Some(Instruction::LD(LoadVariant::MemIndirectToReg(
+                LoadTarget::D,
+                LoadTarget::HLI,
+            ))),
+
+            0x46 => Some(Instruction::LD(LoadVariant::MemIndirectToReg(
+                LoadTarget::B,
+                LoadTarget::HLI,
+            ))),
+
+            0x65 => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::H,
+                LoadTarget::L,
+            ))),
+
+            0x55 => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::D,
+                LoadTarget::L,
+            ))),
+
+            0x45 => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::B,
+                LoadTarget::L,
+            ))),
+
+            0x64 => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::H,
+                LoadTarget::H,
+            ))),
+
+            0x54 => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::D,
+                LoadTarget::H,
+            ))),
+
+            0x44 => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::B,
+                LoadTarget::H,
+            ))),
+
+            0x63 => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::H,
+                LoadTarget::E,
+            ))),
+
+            0x53 => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::D,
+                LoadTarget::E,
+            ))),
+
+            0x43 => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::B,
+                LoadTarget::E,
+            ))),
+
+            0x62 => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::H,
+                LoadTarget::D,
+            ))),
+
+            0x52 => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::D,
+                LoadTarget::D,
+            ))),
+
+            0x42 => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::B,
+                LoadTarget::D,
+            ))),
+
+            0x61 => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::H,
+                LoadTarget::C,
+            ))),
+
+            0x51 => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::D,
+                LoadTarget::C,
+            ))),
+
+            0x41 => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::B,
+                LoadTarget::C,
+            ))),
+
+            0x60 => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::H,
+                LoadTarget::B,
+            ))),
+
+            0x50 => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::D,
+                LoadTarget::B,
+            ))),
+
+            0x40 => Some(Instruction::LD(LoadVariant::RegToReg(
+                LoadTarget::B,
+                LoadTarget::B,
+            ))),
+
+            0x77 => Some(Instruction::LD(LoadVariant::RegToMemIndirect(
+                LoadTarget::HLI,
+                LoadTarget::A,
+            ))),
+
+            0x75 => Some(Instruction::LD(LoadVariant::RegToMemIndirect(
+                LoadTarget::HLI,
+                LoadTarget::L,
+            ))),
+
+            0x74 => Some(Instruction::LD(LoadVariant::RegToMemIndirect(
+                LoadTarget::HLI,
+                LoadTarget::H,
+            ))),
+
+            0x73 => Some(Instruction::LD(LoadVariant::RegToMemIndirect(
+                LoadTarget::HLI,
+                LoadTarget::E,
+            ))),
+
+            0x72 => Some(Instruction::LD(LoadVariant::RegToMemIndirect(
+                LoadTarget::HLI,
+                LoadTarget::D,
+            ))),
+
+            0x71 => Some(Instruction::LD(LoadVariant::RegToMemIndirect(
+                LoadTarget::HLI,
+                LoadTarget::C,
+            ))),
+
+            0x70 => Some(Instruction::LD(LoadVariant::RegToMemIndirect(
+                LoadTarget::HLI,
+                LoadTarget::B,
+            ))),
+
+            0x0E => Some(Instruction::LD(LoadVariant::ImmToReg(LoadTarget::C))),
+            0x1E => Some(Instruction::LD(LoadVariant::ImmToReg(LoadTarget::E))),
+            0x2E => Some(Instruction::LD(LoadVariant::ImmToReg(LoadTarget::L))),
+            0x3E => Some(Instruction::LD(LoadVariant::ImmToReg(LoadTarget::A))),
+
+            0x06 => Some(Instruction::LD(LoadVariant::ImmToReg(LoadTarget::B))),
+            0x16 => Some(Instruction::LD(LoadVariant::ImmToReg(LoadTarget::D))),
+            0x26 => Some(Instruction::LD(LoadVariant::ImmToReg(LoadTarget::H))),
+            0x36 => Some(Instruction::LD(LoadVariant::ImmToMemIndirect(
+                LoadTarget::HLI,
+            ))),
+
+            0x02 => Some(Instruction::LD(LoadVariant::RegToMemIndirect(
+                LoadTarget::A,
+                LoadTarget::BC,
+            ))),
+            0x12 => Some(Instruction::LD(LoadVariant::RegToMemIndirect(
+                LoadTarget::A,
+                LoadTarget::DE,
+            ))),
+            0x22 => Some(Instruction::LD(LoadVariant::RegToMemIndirectInc(
+                LoadTarget::A,
+                LoadTarget::HL,
+            ))),
+            0x32 => Some(Instruction::LD(LoadVariant::RegToMemIndirectDec(
+                LoadTarget::A,
+                LoadTarget::HL,
+            ))),
+
+            0xF0 => Some(Instruction::LD(LoadVariant::MemOffsetToReg(LoadTarget::A))),
+            0xE0 => Some(Instruction::LD(LoadVariant::RegToMemOffset(LoadTarget::A))),
+
+            0xF2 => Some(Instruction::LD(LoadVariant::MemIndirectToReg(
+                LoadTarget::C,
+                LoadTarget::A,
+            ))),
+            0xE2 => Some(Instruction::LD(LoadVariant::RegToMemIndirect(
+                LoadTarget::A,
+                LoadTarget::C,
+            ))),
+
+            0xFA => Some(Instruction::LD(LoadVariant::MemToRegA16(LoadTarget::A))),
+            0xEA => Some(Instruction::LD(LoadVariant::RegAToMemA16(LoadTarget::A))),
             _ => None,
         }
     }
