@@ -91,6 +91,7 @@ pub enum Instruction {
     DAA,
     JP(JumpCondition),
     JR(JumpCondition),
+    JpHli,
 }
 
 #[allow(dead_code)]
@@ -260,7 +261,8 @@ impl Instruction {
             0x20 => Some(Instruction::JR(JumpCondition::NotZero)),
             0x30 => Some(Instruction::JR(JumpCondition::NotCarry)),
 
-            // 0xe9 => Some(Instruction::JPI),
+            // Jump to the memory address relative to the current one.
+            0xe9 => Some(Instruction::JpHli),
 
             // 0xf2 => Some(Instruction::LD(LoadType::AFromIndirect(
             //     Indirect::LastByteIndirect,

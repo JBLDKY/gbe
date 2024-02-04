@@ -3,9 +3,9 @@ use crate::instruction::Arithmetic16BitTarget;
 use crate::instruction::Arithmetic8BitTarget;
 use crate::instruction::Instruction;
 use crate::instruction::Instruction::{
-    AdcHli, AddHli, AndHli, CpHli, OrHli, SbcHli, SubHli, XorHli, ADC, ADD, ADDHL, ADDSPN, AND,
-    BIT, CCF, CP, CPL, DAA, DEC, INC, JP, JR, OR, RESET, RL, RLA, RLC, RLCA, RR, RRA, RRC, RRCA,
-    SBC, SCF, SET, SLA, SRA, SRL, SUB, SWAP, XOR,
+    AdcHli, AddHli, AndHli, CpHli, JpHli, OrHli, SbcHli, SubHli, XorHli, ADC, ADD, ADDHL, ADDSPN,
+    AND, BIT, CCF, CP, CPL, DAA, DEC, INC, JP, JR, OR, RESET, RL, RLA, RLC, RLCA, RR, RRA, RRC,
+    RRCA, SBC, SCF, SET, SLA, SRA, SRL, SUB, SWAP, XOR,
 };
 use crate::instruction::JumpCondition;
 use crate::registers::Registers;
@@ -105,7 +105,13 @@ impl CPU {
             DAA => self.daa(),
             JP(condition) => self.jump(condition),
             JR(condition) => self.jump_relative(condition),
+            JpHli => self.jump_hli(),
         };
+    }
+
+    fn jump_hli(&self) {
+        // Just return this
+        self.registers.get_hl();
     }
 
     /// Jump to the address that is N removed from pc.
@@ -154,6 +160,7 @@ impl CPU {
 
     /// Jump to the address that is stored in the next 16 bits in memory. See self.next_nn()
     fn jump(&mut self, condition: JumpCondition) {
+        // need to return next bytes basically
         match condition {
             JumpCondition::Unconditional => {
                 self.next_nn();
