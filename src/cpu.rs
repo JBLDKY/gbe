@@ -3,9 +3,9 @@ use crate::instruction::Arithmetic16BitTarget;
 use crate::instruction::Arithmetic8BitTarget;
 use crate::instruction::Instruction;
 use crate::instruction::Instruction::{
-    AdcHli, AddHli, AndHli, CpHli, OrHli, SbcHli, SubHli, XorHli, ADC, ADD, ADDHL, AND, BIT, CCF,
-    CP, CPL, DEC, INC, OR, RESET, RL, RLA, RLC, RLCA, RR, RRA, RRC, RRCA, SBC, SCF, SET, SLA, SRA,
-    SRL, SUB, SWAP, XOR,
+    AdcHli, AddHli, AndHli, CpHli, OrHli, SbcHli, SubHli, XorHli, ADC, ADD, ADDHL, ADDSPN, AND,
+    BIT, CCF, CP, CPL, DEC, INC, OR, RESET, RL, RLA, RLC, RLCA, RR, RRA, RRC, RRCA, SBC, SCF, SET,
+    SLA, SRA, SRL, SUB, SWAP, XOR,
 };
 use crate::registers::Registers;
 
@@ -46,14 +46,11 @@ impl CPU {
         }
     }
 
-    // fn step(&mut self) {
-    //     let mut instruction_byte = self.bus.read_byte(self.pc);
-    // }
-
     fn exec(&mut self, instruction: Instruction) {
         match instruction {
             ADD(target) => self.add(target),
             AddHli => self.add_hli(),
+            ADDSPN => self.add_sp_n(),
             ADC(target) => self.add_with_carry(target),
             AdcHli => self.add_with_carry_hli(),
             ADDHL(target) => self.add_hl(target),
@@ -90,6 +87,21 @@ impl CPU {
             SLA(target) => self.sla(target),           // shift left arithmetically
             SWAP(target) => self.swap(target),         // swap upper & lower nibble
         };
+    }
+
+    fn add_sp_n(&mut self) {
+        // TODO: Verify these casts to be working as inteded
+        let value = self.next() as i8 as i16;
+        let new_value = (self.sp as i16).wrapping_add(value) as u16;
+        let sp = self.sp as i16;
+
+        self.registers.f.zero = false;
+        self.registers.f.subtract = false;
+        // Edge cases https://stackoverflow.com/questions/57958631/game-boy-half-carry-flag-and-16-bit-instructions-especially-opcode-0xe8
+        self.registers.f.half_carry = ((sp & 0xF) + (value & 0xF)) > 0x10;
+        self.registers.f.carry = ((sp & 0xFF) + (value & 0xFF)) > 0x100;
+
+        self.sp = new_value as u16;
     }
 
     #[inline(always)]
@@ -461,13 +473,7 @@ impl CPU {
             Arithmetic16BitTarget::HL => self.registers.set_hl(value),
             Arithmetic16BitTarget::BC => self.registers.set_bc(value),
             Arithmetic16BitTarget::DE => self.registers.set_de(value),
-            Arithmetic16BitTarget::SP => self.registers.set_af(value),
-            _ => {
-                panic!(
-                    "Incrementing invalid 16 bit register, with value: {}",
-                    value
-                )
-            }
+            Arithmetic16BitTarget::SP => self.sp = value,
         }
         new_value
     }

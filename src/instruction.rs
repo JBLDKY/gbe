@@ -42,6 +42,7 @@ pub enum Arithmetic8BitTarget {
 pub enum Instruction {
     ADD(Arithmetic8BitTarget),
     AddHli,
+    ADDSPN,
     ADC(Arithmetic8BitTarget),
     AdcHli,
     ADDHL(Arithmetic16BitTarget),
@@ -123,6 +124,9 @@ impl Instruction {
 
             // Add memory adress in HL to A.
             0x86 => Some(Instruction::AddHli),
+
+            // Add memory adress in HL to A.
+            0xe8 => Some(Instruction::ADDSPN),
 
             // 16 bit add
             0x09 => Some(Instruction::ADDHL(Arithmetic16BitTarget::BC)),
@@ -217,7 +221,6 @@ impl Instruction {
             // Compare values with HLI
             0xbe => Some(Instruction::CpHli),
 
-            0xe8 => Some(Instruction::ADDSP),
             0x3f => Some(Instruction::CCF),
             0x37 => Some(Instruction::SCF),
             0x1f => Some(Instruction::RRA),
