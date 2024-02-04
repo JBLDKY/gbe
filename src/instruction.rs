@@ -9,6 +9,23 @@ pub enum Arithmetic16BitTarget {
 
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
+pub enum AnyTarget {
+    A,
+    B,
+    D,
+    H,
+    C,
+    E,
+    L,
+    HLI,
+    BC,
+    DE,
+    HL,
+    SP,
+}
+
+#[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub enum Arithmetic8BitTarget {
     A,
     B,
@@ -40,8 +57,8 @@ pub enum Instruction {
     XorHli,
     CP(Arithmetic8BitTarget),
     CpHli,
-    INC(Arithmetic8BitTarget),
-    DEC(Arithmetic8BitTarget),
+    INC(AnyTarget),
+    DEC(AnyTarget),
     CCF,
     SCF,
     RRA,
@@ -66,31 +83,33 @@ pub enum Instruction {
 impl Instruction {
     fn from_byte(byte: u8) -> Option<Instruction> {
         match byte {
-            // 0x3c => Some(Instruction::INC(IncDecTarget::A)),
-            // 0x04 => Some(Instruction::INC(IncDecTarget::B)),
-            // 0x14 => Some(Instruction::INC(IncDecTarget::D)),
-            // 0x24 => Some(Instruction::INC(IncDecTarget::H)),
-            // 0x0c => Some(Instruction::INC(IncDecTarget::C)),
-            // 0x1c => Some(Instruction::INC(IncDecTarget::E)),
-            // 0x2c => Some(Instruction::INC(IncDecTarget::L)),
-            // 0x34 => Some(Instruction::INC(IncDecTarget::HLI)),
-            // 0x03 => Some(Instruction::INC(IncDecTarget::BC)),
-            // 0x13 => Some(Instruction::INC(IncDecTarget::DE)),
-            // 0x23 => Some(Instruction::INC(IncDecTarget::HL)),
-            // 0x33 => Some(Instruction::INC(IncDecTarget::SP)),
-            //
-            // 0x3d => Some(Instruction::DEC(IncDecTarget::A)),
-            // 0x05 => Some(Instruction::DEC(IncDecTarget::B)),
-            // 0x0d => Some(Instruction::DEC(IncDecTarget::C)),
-            // 0x15 => Some(Instruction::DEC(IncDecTarget::D)),
-            // 0x1d => Some(Instruction::DEC(IncDecTarget::E)),
-            // 0x25 => Some(Instruction::DEC(IncDecTarget::H)),
-            // 0x2d => Some(Instruction::DEC(IncDecTarget::L)),
-            // 0x35 => Some(Instruction::DEC(IncDecTarget::HLI)),
-            // 0x0b => Some(Instruction::DEC(IncDecTarget::BC)),
-            // 0x1b => Some(Instruction::DEC(IncDecTarget::DE)),
-            // 0x2b => Some(Instruction::DEC(IncDecTarget::HL)),
-            // 0x3b => Some(Instruction::DEC(IncDecTarget::SP)),
+            // Increment
+            0x3c => Some(Instruction::INC(AnyTarget::A)),
+            0x04 => Some(Instruction::INC(AnyTarget::B)),
+            0x14 => Some(Instruction::INC(AnyTarget::D)),
+            0x24 => Some(Instruction::INC(AnyTarget::H)),
+            0x0c => Some(Instruction::INC(AnyTarget::C)),
+            0x1c => Some(Instruction::INC(AnyTarget::E)),
+            0x2c => Some(Instruction::INC(AnyTarget::L)),
+            0x34 => Some(Instruction::INC(AnyTarget::HLI)),
+            0x03 => Some(Instruction::INC(AnyTarget::BC)),
+            0x13 => Some(Instruction::INC(AnyTarget::DE)),
+            0x23 => Some(Instruction::INC(AnyTarget::HL)),
+            0x33 => Some(Instruction::INC(AnyTarget::SP)),
+
+            // Decrement
+            0x3d => Some(Instruction::DEC(AnyTarget::A)),
+            0x05 => Some(Instruction::DEC(AnyTarget::B)),
+            0x0d => Some(Instruction::DEC(AnyTarget::C)),
+            0x15 => Some(Instruction::DEC(AnyTarget::D)),
+            0x1d => Some(Instruction::DEC(AnyTarget::E)),
+            0x25 => Some(Instruction::DEC(AnyTarget::H)),
+            0x2d => Some(Instruction::DEC(AnyTarget::L)),
+            0x35 => Some(Instruction::DEC(AnyTarget::HLI)),
+            0x0b => Some(Instruction::DEC(AnyTarget::BC)),
+            0x1b => Some(Instruction::DEC(AnyTarget::DE)),
+            0x2b => Some(Instruction::DEC(AnyTarget::HL)),
+            0x3b => Some(Instruction::DEC(AnyTarget::SP)),
 
             // Add
             0x87 => Some(Instruction::ADD(Arithmetic8BitTarget::A)),
@@ -198,7 +217,7 @@ impl Instruction {
             // Compare values with HLI
             0xbe => Some(Instruction::CpHli),
 
-            // 0xe8 => Some(Instruction::ADDSP),
+            0xe8 => Some(Instruction::ADDSP),
             0x3f => Some(Instruction::CCF),
             0x37 => Some(Instruction::SCF),
             0x1f => Some(Instruction::RRA),
