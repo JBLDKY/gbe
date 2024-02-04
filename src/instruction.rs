@@ -9,6 +9,15 @@ pub enum Arithmetic16BitTarget {
 
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
+pub enum PushTarget {
+    HL,
+    BC,
+    AF,
+    DE,
+}
+
+#[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub enum JumpCondition {
     NotZero,
     NotCarry,
@@ -92,6 +101,7 @@ pub enum Instruction {
     JP(JumpCondition),
     JR(JumpCondition),
     JpHli,
+    PUSH(PushTarget),
 }
 
 #[allow(dead_code)]
@@ -606,11 +616,10 @@ impl Instruction {
             // 0x08 => Some(Instruction::LD(LoadType::IndirectFromSP)),
             // 0xf9 => Some(Instruction::LD(LoadType::SPFromHL)),
             // 0xf8 => Some(Instruction::LD(LoadType::HLFromSPN)),
-
-            // 0xc5 => Some(Instruction::PUSH(StackTarget::BC)),
-            // 0xd5 => Some(Instruction::PUSH(StackTarget::DE)),
-            // 0xe5 => Some(Instruction::PUSH(StackTarget::HL)),
-            // 0xf5 => Some(Instruction::PUSH(StackTarget::AF)),
+            0xc5 => Some(Instruction::PUSH(StackTarget::BC)),
+            0xd5 => Some(Instruction::PUSH(StackTarget::DE)),
+            0xe5 => Some(Instruction::PUSH(StackTarget::HL)),
+            0xf5 => Some(Instruction::PUSH(StackTarget::AF)),
 
             // 0xc1 => Some(Instruction::POP(StackTarget::BC)),
             // 0xd1 => Some(Instruction::POP(StackTarget::DE)),

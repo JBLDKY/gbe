@@ -4,10 +4,11 @@ use crate::instruction::Arithmetic8BitTarget;
 use crate::instruction::Instruction;
 use crate::instruction::Instruction::{
     AdcHli, AddHli, AndHli, CpHli, JpHli, OrHli, SbcHli, SubHli, XorHli, ADC, ADD, ADDHL, ADDSPN,
-    AND, BIT, CCF, CP, CPL, DAA, DEC, INC, JP, JR, OR, RESET, RL, RLA, RLC, RLCA, RR, RRA, RRC,
-    RRCA, SBC, SCF, SET, SLA, SRA, SRL, SUB, SWAP, XOR,
+    AND, BIT, CCF, CP, CPL, DAA, DEC, INC, JP, JR, OR, PUSH, RESET, RL, RLA, RLC, RLCA, RR, RRA,
+    RRC, RRCA, SBC, SCF, SET, SLA, SRA, SRL, SUB, SWAP, XOR,
 };
 use crate::instruction::JumpCondition;
+use crate::instruction::PushTarget;
 use crate::registers::Registers;
 
 /// Memory banks:
@@ -106,7 +107,27 @@ impl CPU {
             JP(condition) => self.jump(condition),
             JR(condition) => self.jump_relative(condition),
             JpHli => self.jump_hli(),
+            PUSH(target) => self.push(target),
         };
+    }
+
+    #[inline(always)]
+    fn push(&mut self, target: PushTarget) {
+        let value = match target {
+            PushTarget::AF => self.registers.get_af(),
+            PushTarget::BC => self.registers.get_bc(),
+            PushTarget::DE => self.registers.get_de(),
+            PushTarget::HL => self.registers.get_hl(),
+        };
+
+        // Higher byte is written first
+        self.sp = self.sp.wrapping_sub(1);
+        self.mem.write(self.sp, ((value & 0xFF00) >> 8) as u8);
+
+        // Followed by the lower byte
+        self.sp = self.sp.wrapping_sub(1);
+        self.mem.write(self.sp, (value & 0xFF) as u8);
+        // Return value?
     }
 
     fn jump_hli(&self) {
