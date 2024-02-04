@@ -9,6 +9,16 @@ pub enum Arithmetic16BitTarget {
 
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
+pub enum JumpCondition {
+    NotZero,
+    NotCarry,
+    Zero,
+    Carry,         // C, NN
+    Unconditional, // NN (address)
+}
+
+#[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub enum AnyTarget {
     A,
     B,
@@ -79,6 +89,7 @@ pub enum Instruction {
     SLA(Arithmetic8BitTarget),
     SWAP(Arithmetic8BitTarget),
     DAA,
+    JP(JumpCondition),
 }
 
 #[allow(dead_code)]
@@ -234,11 +245,11 @@ impl Instruction {
             // Weird BCA Test that compares a to 9 and 154 (?)
             0x27 => Some(Instruction::DAA),
 
-            // 0xc3 => Some(Instruction::JP(JumpTest::Always)),
-            // 0xc2 => Some(Instruction::JP(JumpTest::NotZero)),
-            // 0xd2 => Some(Instruction::JP(JumpTest::NotCarry)),
-            // 0xca => Some(Instruction::JP(JumpTest::Zero)),
-            // 0xda => Some(Instruction::JP(JumpTest::Carry)),
+            0xc3 => Some(Instruction::JP(JumpCondition::Unconditional)),
+            0xc2 => Some(Instruction::JP(JumpCondition::NotZero)),
+            0xd2 => Some(Instruction::JP(JumpCondition::NotCarry)),
+            0xca => Some(Instruction::JP(JumpCondition::Zero)),
+            0xda => Some(Instruction::JP(JumpCondition::Carry)),
 
             // 0x18 => Some(Instruction::JR(JumpTest::Always)),
             // 0x28 => Some(Instruction::JR(JumpTest::Zero)),

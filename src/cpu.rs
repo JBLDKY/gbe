@@ -4,10 +4,26 @@ use crate::instruction::Arithmetic8BitTarget;
 use crate::instruction::Instruction;
 use crate::instruction::Instruction::{
     AdcHli, AddHli, AndHli, CpHli, OrHli, SbcHli, SubHli, XorHli, ADC, ADD, ADDHL, ADDSPN, AND,
-    BIT, CCF, CP, CPL, DAA, DEC, INC, OR, RESET, RL, RLA, RLC, RLCA, RR, RRA, RRC, RRCA, SBC, SCF,
-    SET, SLA, SRA, SRL, SUB, SWAP, XOR,
+    BIT, CCF, CP, CPL, DAA, DEC, INC, JP, OR, RESET, RL, RLA, RLC, RLCA, RR, RRA, RRC, RRCA, SBC,
+    SCF, SET, SLA, SRA, SRL, SUB, SWAP, XOR,
 };
+use crate::instruction::JumpCondition;
 use crate::registers::Registers;
+
+/// Memory banks:
+///
+/// Interrupt register  - 0xFFFF
+/// High RAM            - 0xFF80    - 0xFFFE
+/// Restricted          - 0xFF4C    - 0xFF7F
+/// I/O                 - 0xFF00    - 0xFF4B
+/// Restricted          - 0xFEA0    - 0xFEFF
+/// Sprite Attributes   - 0xFE00    - 0xFE9F
+/// Restricted          - 0xE000    - 0xFDFF
+/// Internal RAM        - 0xC000    - 0xDFFF
+/// Switchable RAM Bank - 0xA000    - 0xBFFF
+/// Video RAM           - 0x8000    - 0x9FFF
+/// Switchable ROM Bank - 0x4000    - 0x7FFF
+/// ROM                 - 0x0000    - 0x3FFF
 
 #[allow(dead_code)]
 struct Mem {
@@ -87,7 +103,36 @@ impl CPU {
             SLA(target) => self.sla(target),           // shift left arithmetically
             SWAP(target) => self.swap(target),         // swap upper & lower nibble
             DAA => self.daa(),
+            JP(condition) => self.jump(condition),
         };
+    }
+
+    fn jump(&mut self, condition: JumpCondition) {
+        match condition {
+            JumpCondition::Unconditional => {
+                self.next_nn();
+            }
+            JumpCondition::Zero => {
+                if self.registers.f.zero {
+                    self.next_nn();
+                }
+            }
+            JumpCondition::Carry => {
+                if self.registers.f.carry {
+                    self.next_nn();
+                }
+            }
+            JumpCondition::NotZero => {
+                if !self.registers.f.zero {
+                    self.next_nn();
+                }
+            }
+            JumpCondition::NotCarry => {
+                if !self.registers.f.carry {
+                    self.next_nn();
+                }
+            }
+        }
     }
 
     /// Source: http://z80-heaven.wikidot.com/instructions-set:daa
@@ -123,6 +168,17 @@ impl CPU {
         self.registers.f.carry = ((sp & 0xFF) + (value & 0xFF)) > 0x100;
 
         self.sp = new_value as u16;
+    }
+
+    #[inline(always)]
+    fn next_nn(&mut self) -> u16 {
+        self.pc += 1;
+        let n1 = self.mem.read(self.pc);
+
+        self.pc += 1;
+        let n2 = self.mem.read(self.pc);
+
+        (n2 << 8) as u16 | n1 as u16
     }
 
     #[inline(always)]
@@ -630,7 +686,6 @@ impl CPU {
 
     #[inline(always)]
     fn xor(&mut self, target: Arithmetic8BitTarget) {
-        // TODO implement OR for HL
         let new_value = self.registers.a ^ self.read_8bit_register(&target);
         self.registers.f.zero = new_value == 0;
         self.registers.f.subtract = false;
@@ -640,7 +695,6 @@ impl CPU {
 
     #[inline(always)]
     fn or(&mut self, target: Arithmetic8BitTarget) {
-        // TODO implement OR for HL
         let new_value = self.registers.a | self.read_8bit_register(&target);
         self.registers.f.zero = new_value == 0;
         self.registers.f.subtract = false;
@@ -753,8 +807,6 @@ impl CPU {
             Arithmetic8BitTarget::F => self.registers.f.into(),
             Arithmetic8BitTarget::H => self.registers.h,
             Arithmetic8BitTarget::L => self.registers.l,
-            // ArithmeticTarget::HL => self.registers.h, What the fuck?
-            // ArithmeticTarget::D8 => self.registers.l,
             _ => unimplemented!(),
         }
     }
