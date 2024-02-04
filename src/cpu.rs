@@ -9,6 +9,7 @@ use crate::instruction::Instruction::{
     SWAP, XOR,
 };
 use crate::instruction::JumpCondition;
+use crate::instruction::PrefixTarget;
 use crate::instruction::StackTarget;
 use crate::registers::Registers;
 
@@ -36,6 +37,15 @@ struct Mem {
 impl Mem {
     fn read(&self, hex: u16) -> u8 {
         self.address[hex as usize]
+    }
+
+    fn modify<F>(&mut self, hex: u16, modifier: F)
+    where
+        F: FnOnce(u8) -> u8,
+    {
+        let value = self.read(hex);
+        let new_value = modifier(value);
+        self.write(hex, new_value);
     }
 
     fn write(&mut self, hex: u16, value: u8) {
@@ -86,28 +96,28 @@ impl CPU {
             CpHli => self.compare_hli(),
             INC(target) => self.match_increment_target(target),
             DEC(target) => self.match_decrement_target(target),
-            CCF => self.set_unset(),                   // toggle carry flag
-            SCF => self.set_carry(),                   // set carry flag to 1
-            RRA => self.rra(),                         // rotate right & carry register A
-            RLA => self.rla(),                         // rotate left & carry register A
-            RRCA => self.rrca(),                       // rotate right without carry register A
-            RLCA => self.rlca(),                       // rotate left without carry register A
-            CPL => self.cpl(),                         // complement a (toggle all)
-            BIT(target, idx) => self.bit(target, idx), // check if bit is set
-            RESET(target, idx) => self.reset(target, idx), // set bit to 0
-            SET(target, idx) => self.set(target, idx), // set bit to 1
-            SRL(target) => self.srl(target),           // shift right logical
-            RR(target) => self.rr(target),             // rotate right & carry
-            RL(target) => self.rl(target),             // rotate left & carry
-            RRC(target) => self.rrc(target),           // rotate right without carry
-            RLC(target) => self.rlc(target),           // rotate left without carry
-            SRA(target) => self.sra(target),           // shift right arithmetically
-            SLA(target) => self.sla(target),           // shift left arithmetically
-            SWAP(target) => self.swap(target),         // swap upper & lower nibble
-            DAA => self.daa(),                         // does some weird shit
-            JP(condition) => self.jump(condition),     // Jump to
+            CCF => self.set_unset(), // toggle carry flag
+            SCF => self.set_carry(), // set carry flag to 1
+            RRA => self.rra(),       // rotate right & carry register A
+            RLA => self.rla(),       // rotate left & carry register A
+            RRCA => self.rrca(),     // rotate right without carry register A
+            RLCA => self.rlca(),     // rotate left without carry register A
+            CPL => self.cpl(),       // complement a (toggle all)
+            BIT(target, idx) => self.bit(target, idx.into()), // check if bit is set
+            RESET(target, idx) => self.reset(target, idx.into()), // set bit to 0
+            SET(target, idx) => self.set(target, idx.into()), // set bit to 1
+            SRL(target) => self.srl(target), // shift right logical
+            RR(target) => self.rr(target), // rotate right & carry
+            RL(target) => self.rl(target), // rotate left & carry
+            RRC(target) => self.rrc(target), // rotate right without carry
+            RLC(target) => self.rlc(target), // rotate left without carry
+            SRA(target) => self.sra(target), // shift right arithmetically
+            SLA(target) => self.sla(target), // shift left arithmetically
+            SWAP(target) => self.swap(target), // swap upper & lower nibble
+            DAA => self.daa(),       // does some weird shit
+            JP(condition) => self.jump(condition), // Jump to
             JR(condition) => self.jump_relative(condition), // jump relative from PC
-            JpHli => self.jump_hli(),                  // jump to address in HL
+            JpHli => self.jump_hli(), // jump to address in HL
             // Move this shit
             PUSH(target) => {
                 let value = match target {
@@ -436,9 +446,15 @@ impl CPU {
     }
 
     #[inline(always)]
-    fn swap(&mut self, target: Arithmetic8BitTarget) {
+    fn swap(&mut self, target: PrefixTarget) {
         // Swap bits 0-3 with 4-7
-        let value = self.read_8bit_register(&target);
+        let value = match target {
+            PrefixTarget::HLI => {
+                let address = self.registers.get_hl();
+                self.mem.read(address)
+            }
+            _ => self.read_prefix_target_register(&target),
+        };
         let upper = value & 0b1111;
         let lower = value >> 4;
         let new_value = (upper << 4) | lower;
@@ -448,12 +464,23 @@ impl CPU {
         self.registers.f.half_carry = false;
         self.registers.f.carry = false;
 
-        self.modify_8bit_register(target, |_| new_value);
+        match target {
+            PrefixTarget::HLI => {
+                self.mem.write(self.registers.get_hl(), new_value);
+            }
+            _ => self.write_prefix_target_register(target, new_value),
+        };
     }
 
     #[inline(always)]
-    fn sra(&mut self, target: Arithmetic8BitTarget) {
-        let value = self.read_8bit_register(&target);
+    fn sra(&mut self, target: PrefixTarget) {
+        let value = match target {
+            PrefixTarget::HLI => {
+                let address = self.registers.get_hl();
+                self.mem.read(address)
+            }
+            _ => self.read_prefix_target_register(&target),
+        };
         let new_value = (value as i8) >> 1;
 
         self.registers.f.zero = new_value == 0;
@@ -461,12 +488,23 @@ impl CPU {
         self.registers.f.half_carry = false;
         self.registers.f.carry = (value & 0x01) != 0;
 
-        self.modify_8bit_register(target, |_| new_value as u8);
+        match target {
+            PrefixTarget::HLI => {
+                self.mem.write(self.registers.get_hl(), new_value as u8);
+            }
+            _ => self.write_prefix_target_register(target, new_value as u8),
+        };
     }
 
     #[inline(always)]
-    fn sla(&mut self, target: Arithmetic8BitTarget) {
-        let value = self.read_8bit_register(&target);
+    fn sla(&mut self, target: PrefixTarget) {
+        let value = match target {
+            PrefixTarget::HLI => {
+                let address = self.registers.get_hl();
+                self.mem.read(address)
+            }
+            _ => self.read_prefix_target_register(&target),
+        };
         let new_value = value << 1;
 
         self.registers.f.zero = new_value == 0;
@@ -474,12 +512,23 @@ impl CPU {
         self.registers.f.half_carry = false;
         self.registers.f.carry = (value & 0x80) != 0;
 
-        self.modify_8bit_register(target, |_| new_value);
+        match target {
+            PrefixTarget::HLI => {
+                self.mem.write(self.registers.get_hl(), new_value);
+            }
+            _ => self.write_prefix_target_register(target, new_value),
+        };
     }
 
     #[inline(always)]
-    fn rrc(&mut self, target: Arithmetic8BitTarget) {
-        let value = self.read_8bit_register(&target);
+    fn rrc(&mut self, target: PrefixTarget) {
+        let value = match target {
+            PrefixTarget::HLI => {
+                let address = self.registers.get_hl();
+                self.mem.read(address)
+            }
+            _ => self.read_prefix_target_register(&target),
+        };
         let right_bit = 0b1 & value;
 
         let new_value = value.rotate_right(1);
@@ -489,12 +538,24 @@ impl CPU {
         self.registers.f.half_carry = false;
         self.registers.f.carry = right_bit != 0;
 
-        self.modify_8bit_register(target, |_| new_value);
+        match target {
+            PrefixTarget::HLI => {
+                self.mem.write(self.registers.get_hl(), new_value);
+            }
+            _ => self.write_prefix_target_register(target, new_value),
+        };
     }
 
     #[inline(always)]
-    fn rlc(&mut self, target: Arithmetic8BitTarget) {
-        let value = self.read_8bit_register(&target);
+    fn rlc(&mut self, target: PrefixTarget) {
+        let value = match target {
+            PrefixTarget::HLI => {
+                let address = self.registers.get_hl();
+                self.mem.read(address)
+            }
+            _ => self.read_prefix_target_register(&target),
+        };
+
         let left_bit = 0b1000_0000 & value;
 
         let new_value = value.rotate_left(1);
@@ -504,12 +565,24 @@ impl CPU {
         self.registers.f.half_carry = false;
         self.registers.f.carry = left_bit != 0;
 
-        self.modify_8bit_register(target, |_| new_value);
+        match target {
+            PrefixTarget::HLI => {
+                self.mem.write(self.registers.get_hl(), new_value);
+            }
+            _ => self.write_prefix_target_register(target, new_value),
+        };
     }
 
     #[inline(always)]
-    fn rl(&mut self, target: Arithmetic8BitTarget) {
-        let value = self.read_8bit_register(&target);
+    fn rl(&mut self, target: PrefixTarget) {
+        let value = match target {
+            PrefixTarget::HLI => {
+                let address = self.registers.get_hl();
+                self.mem.read(address)
+            }
+            _ => self.read_prefix_target_register(&target),
+        };
+
         let left_bit = 0b1000_0000 & value;
         let mut new_value = value.rotate_left(1);
         if self.registers.f.carry == true {
@@ -521,12 +594,24 @@ impl CPU {
         self.registers.f.half_carry = false;
         self.registers.f.carry = left_bit != 0;
 
-        self.modify_8bit_register(target, |_| new_value);
+        match target {
+            PrefixTarget::HLI => {
+                self.mem.write(self.registers.get_hl(), new_value);
+            }
+            _ => self.write_prefix_target_register(target, new_value),
+        };
     }
 
     #[inline(always)]
-    fn rr(&mut self, target: Arithmetic8BitTarget) {
-        let value = self.read_8bit_register(&target);
+    fn rr(&mut self, target: PrefixTarget) {
+        let value = match target {
+            PrefixTarget::HLI => {
+                let address = self.registers.get_hl();
+                self.mem.read(address)
+            }
+            _ => self.read_prefix_target_register(&target),
+        };
+
         let right_bit = 0b1 & value; // Save the last bit by using `and` with 0000_0001
         let mut new_value = value.rotate_right(1); // rotate everything right
         if self.registers.f.carry == true {
@@ -538,49 +623,86 @@ impl CPU {
         self.registers.f.half_carry = false; // half carry is not applicable when accumulating
         self.registers.f.carry = right_bit != 0; // save the right-most bit into the carry flag
 
-        self.modify_8bit_register(target, |_| new_value);
+        match target {
+            PrefixTarget::HLI => {
+                self.mem.write(self.registers.get_hl(), new_value);
+            }
+            _ => self.write_prefix_target_register(target, new_value),
+        };
     }
 
     #[inline(always)]
-    fn srl(&mut self, target: Arithmetic8BitTarget) {
-        let value = self.read_8bit_register(&target);
-        let new_value = value >> 1;
-        self.modify_8bit_register(target, |_| new_value);
+    fn srl(&mut self, target: PrefixTarget) {
+        let (new_value, value) = match target {
+            PrefixTarget::HLI => {
+                let address = self.registers.get_hl();
+                let value = self.mem.read(address);
+                let new_value = value >> 1;
+                self.mem.write(address, new_value);
+                (new_value, value)
+            }
+            _ => {
+                let value = self.read_prefix_target_register(&target);
+                let new_value = value >> 1;
+                self.modify_prefix_target_register(target, |_| new_value);
+                (new_value, value)
+            }
+        };
 
+        // Set flags
         self.registers.f.zero = new_value == 0;
         self.registers.f.subtract = false;
         self.registers.f.half_carry = false;
-        // last bit of original value == 1
         self.registers.f.carry = (value & 0x01) != 0;
     }
 
     #[inline(always)]
-    fn set(&mut self, target: Arithmetic8BitTarget, idx: u8) {
+    fn set(&mut self, target: PrefixTarget, idx: u8) {
         assert!(idx < 8);
-
-        let value = self.read_8bit_register(&target);
         let mask = 1 << idx;
-        let new_value = value | mask;
 
-        self.modify_8bit_register(target, |_| new_value);
+        match target {
+            PrefixTarget::HLI => {
+                self.mem
+                    .modify(self.registers.get_hl(), |value| value | mask);
+            }
+            _ => {
+                self.modify_prefix_target_register(target, |value| value | mask);
+            }
+        };
     }
 
     #[inline(always)]
-    fn reset(&mut self, target: Arithmetic8BitTarget, idx: u8) {
+    fn reset(&mut self, target: PrefixTarget, idx: u8) {
         assert!(idx < 8);
 
-        let value = self.read_8bit_register(&target);
         let mask = !(1 << idx);
-        let new_value = value ^ mask;
 
-        self.modify_8bit_register(target, |_| new_value);
+        match target {
+            PrefixTarget::HLI => {
+                let address = self.registers.get_hl();
+                let value = self.mem.read(address);
+                let new_value = value ^ mask;
+                self.mem.write(address, new_value);
+            }
+            _ => {
+                self.modify_prefix_target_register(target, |value| value ^ mask);
+            }
+        };
     }
 
     #[inline(always)]
-    fn bit(&mut self, target: Arithmetic8BitTarget, idx: u8) {
+    fn bit(&mut self, target: PrefixTarget, idx: u8) {
         assert!(idx < 8);
 
-        let value = self.read_8bit_register(&target);
+        let value = match target {
+            PrefixTarget::HLI => {
+                let address = self.registers.get_hl();
+                self.mem.read(address)
+            }
+            _ => self.read_prefix_target_register(&target),
+        };
+
         let mask = 1 << idx;
         let bit = value & mask;
 
@@ -694,6 +816,47 @@ impl CPU {
         }
         new_value
     }
+
+    #[inline(always)]
+    fn write_prefix_target_register(&mut self, target: PrefixTarget, new_value: u8) {
+        match target {
+            PrefixTarget::A => self.registers.a = new_value,
+            PrefixTarget::B => self.registers.b = new_value,
+            PrefixTarget::C => self.registers.c = new_value,
+            PrefixTarget::D => self.registers.d = new_value,
+            PrefixTarget::E => self.registers.e = new_value,
+            PrefixTarget::H => self.registers.h = new_value,
+            PrefixTarget::L => self.registers.l = new_value,
+            _ => {}
+        }
+    }
+
+    #[inline(always)]
+    fn modify_prefix_target_register<F>(&mut self, target: PrefixTarget, modifier: F) -> u8
+    where
+        F: FnOnce(u8) -> u8,
+    {
+        let value = self.read_prefix_target_register(&target);
+        let new_value = modifier(value);
+
+        match target {
+            PrefixTarget::A => self.registers.a = new_value,
+            PrefixTarget::B => self.registers.b = new_value,
+            PrefixTarget::C => self.registers.c = new_value,
+            PrefixTarget::D => self.registers.d = new_value,
+            PrefixTarget::E => self.registers.e = new_value,
+            PrefixTarget::H => self.registers.h = new_value,
+            PrefixTarget::L => self.registers.l = new_value,
+            _ => {
+                panic!(
+                    "Incrementing invalid register, probably HL with value: {}",
+                    value
+                )
+            }
+        }
+        new_value
+    }
+
     #[inline(always)]
     fn modify_8bit_register<F>(&mut self, target: Arithmetic8BitTarget, modifier: F) -> u8
     where
@@ -933,6 +1096,20 @@ impl CPU {
             Arithmetic16BitTarget::BC => self.registers.get_bc(),
             Arithmetic16BitTarget::DE => self.registers.get_de(),
             Arithmetic16BitTarget::SP => self.sp,
+        }
+    }
+
+    #[inline(always)]
+    fn read_prefix_target_register(&self, target: &PrefixTarget) -> u8 {
+        match target {
+            PrefixTarget::A => self.registers.a,
+            PrefixTarget::B => self.registers.b,
+            PrefixTarget::C => self.registers.c,
+            PrefixTarget::D => self.registers.d,
+            PrefixTarget::E => self.registers.e,
+            PrefixTarget::H => self.registers.h,
+            PrefixTarget::L => self.registers.l,
+            _ => unimplemented!(),
         }
     }
 
