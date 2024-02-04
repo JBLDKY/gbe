@@ -168,11 +168,32 @@ impl CPU {
                 LoadVariant::RegToReg(destination, source) => {
                     self.load_register_into_register(destination, source)
                 }
+                LoadVariant::MemIndirectToReg(destination, source) => {}
                 _ => unimplemented!(),
             },
         }
     }
 
+    #[inline(always)]
+    fn load_mem_indirect_to_reg(&mut self, destination: LoadTarget, source: LoadTarget) {
+        let address = self.get_address_from_load_target(&source);
+        let value = self.mem.read(address);
+        self.write_load_target_register(&destination, value);
+    }
+
+    #[inline(always)]
+    fn get_address_from_load_target(&self, source: &LoadTarget) -> u16 {
+        match source {
+            LoadTarget::HLI => self.registers.get_hl(),
+            LoadTarget::HL => self.registers.get_hl(),
+            LoadTarget::DE => self.registers.get_de(),
+            LoadTarget::BC => self.registers.get_bc(),
+            LoadTarget::C => (self.mem.read(0xFF00) + self.registers.c).into(),
+            _ => panic!(
+                "Trying to get address for LoadTarget during load_mem_indirect_to_reg instruction"
+            ),
+        }
+    }
     #[inline(always)]
     fn load_register_into_register(&mut self, destination: LoadTarget, source: LoadTarget) {
         let value = self.read_load_target_register(&source);
@@ -1128,7 +1149,7 @@ impl CPU {
     }
 
     #[inline(always)]
-    fn write_load_target_register(&self, target: &LoadTarget, value: u8) -> u8 {
+    fn write_load_target_register(&mut self, target: &LoadTarget, value: u8) {
         match target {
             LoadTarget::A => self.registers.a = value,
             LoadTarget::B => self.registers.b = value,

@@ -441,20 +441,20 @@ impl Instruction {
 
             // LOAD INSTRUCTIONR BELOW
             0x0a => Some(Instruction::LD(LoadVariant::MemIndirectToReg(
-                LoadTarget::BC,
                 LoadTarget::A,
+                LoadTarget::BC,
             ))),
             0x1a => Some(Instruction::LD(LoadVariant::MemIndirectToReg(
-                LoadTarget::DE,
                 LoadTarget::A,
+                LoadTarget::DE,
             ))),
             0x2a => Some(Instruction::LD(LoadVariant::MemIndirectToRegIncHL(
-                LoadTarget::HL,
                 LoadTarget::A,
+                LoadTarget::HL,
             ))),
             0x3a => Some(Instruction::LD(LoadVariant::MemIndirectToRegDecHL(
-                LoadTarget::HL,
                 LoadTarget::A,
+                LoadTarget::HL,
             ))),
 
             0x7F => Some(Instruction::LD(LoadVariant::RegToReg(
@@ -785,12 +785,12 @@ impl Instruction {
             0xE0 => Some(Instruction::LD(LoadVariant::RegToMemOffset(LoadTarget::A))),
 
             0xF2 => Some(Instruction::LD(LoadVariant::MemIndirectToReg(
-                LoadTarget::C,
                 LoadTarget::A,
+                LoadTarget::C,
             ))),
             0xE2 => Some(Instruction::LD(LoadVariant::RegToMemIndirect(
-                LoadTarget::A,
                 LoadTarget::C,
+                LoadTarget::A,
             ))),
 
             0xFA => Some(Instruction::LD(LoadVariant::MemToRegA16(LoadTarget::A))),
