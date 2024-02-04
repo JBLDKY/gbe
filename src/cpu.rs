@@ -2,8 +2,9 @@ use crate::instruction::Arithmetic16BitTarget;
 use crate::instruction::Arithmetic8BitTarget;
 use crate::instruction::Instruction;
 use crate::instruction::Instruction::{
-    AdcHli, AddHli, AndHli, SbcHli, SubHli, ADC, ADD, ADDHL, AND, BIT, CCF, CP, CPL, DEC, INC, OR,
-    RESET, RL, RLA, RLC, RLCA, RR, RRA, RRC, RRCA, SBC, SCF, SET, SLA, SRA, SRL, SUB, SWAP, XOR,
+    AdcHli, AddHli, AndHli, CpHli, OrHli, SbcHli, SubHli, XorHli, ADC, ADD, ADDHL, AND, BIT, CCF,
+    CP, CPL, DEC, INC, OR, RESET, RL, RLA, RLC, RLCA, RR, RRA, RRC, RRCA, SBC, SCF, SET, SLA, SRA,
+    SRL, SUB, SWAP, XOR,
 };
 use crate::registers::Registers;
 
@@ -62,29 +63,68 @@ impl CPU {
             AND(target) => self.and(target),
             AndHli => self.and_hli(),
             OR(target) => self.or(target),
+            OrHli => self.or_hli(),
             XOR(target) => self.xor(target),
+            XorHli => self.xor_hli(),
             CP(target) => self.compare(target),
+            CpHli => self.compare_hli(),
             INC(target) => self.increment(target),
             DEC(target) => self.decrement(target),
-            CCF(_) => self.set_unset(), // toggle carry flag
-            SCF(_) => self.set_carry(), // set carry flag to 1
-            RRA => self.rra(),          // rotate right & carry register A
-            RLA => self.rla(),          // rotate left & carry register A
-            RRCA => self.rrca(),        // rotate right without carry register A
-            RLCA => self.rlca(),        // rotate left without carry register A
-            CPL => self.cpl(),          // complement a (toggle all)
+            CCF => self.set_unset(),                   // toggle carry flag
+            SCF => self.set_carry(),                   // set carry flag to 1
+            RRA => self.rra(),                         // rotate right & carry register A
+            RLA => self.rla(),                         // rotate left & carry register A
+            RRCA => self.rrca(),                       // rotate right without carry register A
+            RLCA => self.rlca(),                       // rotate left without carry register A
+            CPL => self.cpl(),                         // complement a (toggle all)
             BIT(target, idx) => self.bit(target, idx), // check if bit is set
             RESET(target, idx) => self.reset(target, idx), // set bit to 0
             SET(target, idx) => self.set(target, idx), // set bit to 1
-            SRL(target) => self.srl(target), // shift right logical
-            RR(target) => self.rr(target), // rotate right & carry
-            RL(target) => self.rl(target), // rotate left & carry
-            RRC(target) => self.rrc(target), // rotate right without carry
-            RLC(target) => self.rlc(target), // rotate left without carry
-            SRA(target) => self.sra(target), // shift right arithmetically
-            SLA(target) => self.sla(target), // shift left arithmetically
-            SWAP(target) => self.swap(target), // swap upper & lower nibble
+            SRL(target) => self.srl(target),           // shift right logical
+            RR(target) => self.rr(target),             // rotate right & carry
+            RL(target) => self.rl(target),             // rotate left & carry
+            RRC(target) => self.rrc(target),           // rotate right without carry
+            RLC(target) => self.rlc(target),           // rotate left without carry
+            SRA(target) => self.sra(target),           // shift right arithmetically
+            SLA(target) => self.sla(target),           // shift left arithmetically
+            SWAP(target) => self.swap(target),         // swap upper & lower nibble
         };
+    }
+
+    #[inline(always)]
+    fn compare_hli(&mut self) {
+        let address = self.registers.get_hl();
+        let value = self.mem.read(address);
+        let new_value = self.registers.a ^ value;
+
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.subtract = false;
+        self.registers.f.half_carry = false;
+        self.registers.f.carry = false;
+    }
+
+    #[inline(always)]
+    fn xor_hli(&mut self) {
+        let address = self.registers.get_hl();
+        let value = self.mem.read(address);
+        let new_value = self.registers.a ^ value;
+
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.subtract = false;
+        self.registers.f.half_carry = false;
+        self.registers.f.carry = false;
+    }
+
+    #[inline(always)]
+    fn or_hli(&mut self) {
+        let address = self.registers.get_hl();
+        let value = self.mem.read(address);
+        let new_value = self.registers.a | value;
+
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.subtract = false;
+        self.registers.f.half_carry = false;
+        self.registers.f.carry = false;
     }
 
     #[inline(always)]
@@ -455,7 +495,6 @@ impl CPU {
     /// Doesn't set anything other than flags.
     #[inline(always)]
     fn compare(&mut self, target: Arithmetic8BitTarget) {
-        // TODO implement OR for HL
         let new_value = self.registers.a ^ self.read_8bit_register(&target);
         self.registers.f.zero = new_value == 0;
         self.registers.f.subtract = false;
@@ -494,7 +533,6 @@ impl CPU {
 
     #[inline(always)]
     fn subtract_with_carry(&mut self, target: Arithmetic8BitTarget) {
-        // TODO implement SBC for HL
         let value = self.read_8bit_register(&target);
         let (new_value, overflow) = self
             .registers

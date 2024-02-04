@@ -35,12 +35,15 @@ pub enum Instruction {
     AND(Arithmetic8BitTarget),
     AndHli,
     OR(Arithmetic8BitTarget),
+    OrHli,
     XOR(Arithmetic8BitTarget),
+    XorHli,
     CP(Arithmetic8BitTarget),
+    CpHli,
     INC(Arithmetic8BitTarget),
     DEC(Arithmetic8BitTarget),
-    CCF(Arithmetic8BitTarget),
-    SCF(Arithmetic8BitTarget),
+    CCF,
+    SCF,
     RRA,
     RLA,
     RRCA,
@@ -165,8 +168,10 @@ impl Instruction {
             0xb3 => Some(Instruction::OR(Arithmetic8BitTarget::E)),
             0xb4 => Some(Instruction::OR(Arithmetic8BitTarget::H)),
             0xb5 => Some(Instruction::OR(Arithmetic8BitTarget::L)),
-            // 0xb6 => Some(Instruction::OR(Arithmetic8BitTarget::HLI)),
             0xf6 => Some(Instruction::OR(Arithmetic8BitTarget::D8)),
+
+            // Logical OR with memory address value in HL
+            0xb6 => Some(Instruction::OrHli),
 
             0xaf => Some(Instruction::XOR(Arithmetic8BitTarget::A)),
             0xa8 => Some(Instruction::XOR(Arithmetic8BitTarget::B)),
@@ -175,9 +180,12 @@ impl Instruction {
             0xab => Some(Instruction::XOR(Arithmetic8BitTarget::E)),
             0xac => Some(Instruction::XOR(Arithmetic8BitTarget::H)),
             0xad => Some(Instruction::XOR(Arithmetic8BitTarget::L)),
-            // 0xae => Some(Instruction::XOR(Arithmetic8BitTarget::HLI)),
             0xee => Some(Instruction::XOR(Arithmetic8BitTarget::D8)),
 
+            // Logical XOR with memory address value in HL
+            0xae => Some(Instruction::XorHli),
+
+            // Compare values
             0xbf => Some(Instruction::CP(Arithmetic8BitTarget::A)),
             0xb8 => Some(Instruction::CP(Arithmetic8BitTarget::B)),
             0xb9 => Some(Instruction::CP(Arithmetic8BitTarget::C)),
@@ -185,13 +193,14 @@ impl Instruction {
             0xbb => Some(Instruction::CP(Arithmetic8BitTarget::E)),
             0xbc => Some(Instruction::CP(Arithmetic8BitTarget::H)),
             0xbd => Some(Instruction::CP(Arithmetic8BitTarget::L)),
-            // 0xbe => Some(Instruction::CP(Arithmetic8BitTarget::HLI)),
             0xfe => Some(Instruction::CP(Arithmetic8BitTarget::D8)),
 
-            // 0xe8 => Some(Instruction::ADDSP),
+            // Compare values with HLI
+            0xbe => Some(Instruction::CpHli),
 
-            // 0x3f => Some(Instruction::CCF),
-            // 0x37 => Some(Instruction::SCF),
+            // 0xe8 => Some(Instruction::ADDSP),
+            0x3f => Some(Instruction::CCF),
+            0x37 => Some(Instruction::SCF),
             0x1f => Some(Instruction::RRA),
             0x17 => Some(Instruction::RLA),
             0x0f => Some(Instruction::RRCA),
