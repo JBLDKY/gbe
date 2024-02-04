@@ -140,30 +140,11 @@ impl CPU {
 
         match condition {
             JumpCondition::Unconditional => {}
-
-            JumpCondition::Zero => {
-                if !self.registers.f.zero {
-                    return;
-                }
-            }
-
-            JumpCondition::Carry => {
-                if !self.registers.f.carry {
-                    return;
-                }
-            }
-
-            JumpCondition::NotZero => {
-                if self.registers.f.zero {
-                    return;
-                }
-            }
-
-            JumpCondition::NotCarry => {
-                if self.registers.f.carry {
-                    return;
-                }
-            }
+            JumpCondition::Zero if !self.registers.f.zero => return,
+            JumpCondition::Carry if !self.registers.f.carry => return,
+            JumpCondition::NotZero if self.registers.f.zero => return,
+            JumpCondition::NotCarry if self.registers.f.carry => return,
+            _ => {}
         }
 
         self.push(next_position);
@@ -204,30 +185,11 @@ impl CPU {
 
         match condition {
             JumpCondition::Unconditional => {}
-
-            JumpCondition::Zero => {
-                if !self.registers.f.zero {
-                    return;
-                }
-            }
-
-            JumpCondition::Carry => {
-                if !self.registers.f.carry {
-                    return;
-                }
-            }
-
-            JumpCondition::NotZero => {
-                if self.registers.f.zero {
-                    return;
-                }
-            }
-
-            JumpCondition::NotCarry => {
-                if self.registers.f.carry {
-                    return;
-                }
-            }
+            JumpCondition::Zero if !self.registers.f.zero => return,
+            JumpCondition::Carry if !self.registers.f.carry => return,
+            JumpCondition::NotZero if self.registers.f.zero => return,
+            JumpCondition::NotCarry if self.registers.f.carry => return,
+            _ => {}
         }
 
         let offset = self.next() as i8;
@@ -243,34 +205,15 @@ impl CPU {
     fn jump(&mut self, condition: JumpCondition) {
         // need to return next bytes basically
         match condition {
-            JumpCondition::Unconditional => {
-                self.next_nn();
-            }
-
-            JumpCondition::Zero => {
-                if self.registers.f.zero {
-                    self.next_nn();
-                }
-            }
-
-            JumpCondition::Carry => {
-                if self.registers.f.carry {
-                    self.next_nn();
-                }
-            }
-
-            JumpCondition::NotZero => {
-                if !self.registers.f.zero {
-                    self.next_nn();
-                }
-            }
-
-            JumpCondition::NotCarry => {
-                if !self.registers.f.carry {
-                    self.next_nn();
-                }
-            }
+            JumpCondition::Unconditional => {}
+            JumpCondition::Zero if !self.registers.f.zero => return,
+            JumpCondition::Carry if !self.registers.f.carry => return,
+            JumpCondition::NotZero if self.registers.f.zero => return,
+            JumpCondition::NotCarry if self.registers.f.carry => return,
+            _ => {}
         }
+
+        self.next_nn();
     }
 
     /// Source: http://z80-heaven.wikidot.com/instructions-set:daa

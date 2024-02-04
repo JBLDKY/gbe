@@ -631,6 +631,7 @@ impl Instruction {
             0xe1 => Some(Instruction::POP(StackTarget::HL)),
             0xf1 => Some(Instruction::POP(StackTarget::AF)),
 
+            // Push but with conditions.
             0xc5 => Some(Instruction::CALL(JumpCondition::NotZero)),
             0xd4 => Some(Instruction::CALL(JumpCondition::NotCarry)),
             0xcc => Some(Instruction::CALL(JumpCondition::Zero)),
