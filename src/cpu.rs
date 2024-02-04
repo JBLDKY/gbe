@@ -4,8 +4,8 @@ use crate::instruction::Arithmetic8BitTarget;
 use crate::instruction::Instruction;
 use crate::instruction::Instruction::{
     AdcHli, AddHli, AndHli, CpHli, OrHli, SbcHli, SubHli, XorHli, ADC, ADD, ADDHL, ADDSPN, AND,
-    BIT, CCF, CP, CPL, DAA, DEC, INC, JP, OR, RESET, RL, RLA, RLC, RLCA, RR, RRA, RRC, RRCA, SBC,
-    SCF, SET, SLA, SRA, SRL, SUB, SWAP, XOR,
+    BIT, CCF, CP, CPL, DAA, DEC, INC, JP, JR, OR, RESET, RL, RLA, RLC, RLCA, RR, RRA, RRC, RRCA,
+    SBC, SCF, SET, SLA, SRA, SRL, SUB, SWAP, XOR,
 };
 use crate::instruction::JumpCondition;
 use crate::registers::Registers;
@@ -104,29 +104,79 @@ impl CPU {
             SWAP(target) => self.swap(target),         // swap upper & lower nibble
             DAA => self.daa(),
             JP(condition) => self.jump(condition),
+            JR(condition) => self.jump_relative(condition),
         };
     }
 
+    /// Jump to the address that is N removed from pc.
+    fn jump_relative(&mut self, condition: JumpCondition) {
+        // Advance 2 bytes:
+        // Byte 1: Jump instruction
+        // Byte 2: Relative jump distance
+        let new_position = self.pc.wrapping_add(2);
+
+        match condition {
+            JumpCondition::Unconditional => {}
+
+            JumpCondition::Zero => {
+                if !self.registers.f.zero {
+                    return;
+                }
+            }
+
+            JumpCondition::Carry => {
+                if !self.registers.f.carry {
+                    return;
+                }
+            }
+
+            JumpCondition::NotZero => {
+                if self.registers.f.zero {
+                    return;
+                }
+            }
+
+            JumpCondition::NotCarry => {
+                if self.registers.f.carry {
+                    return;
+                }
+            }
+        }
+
+        let offset = self.next() as i8;
+        // Probably needs returning someday
+        let _pc = if offset >= 0 {
+            new_position.wrapping_add(offset as u16)
+        } else {
+            new_position.wrapping_sub(offset.abs() as u16)
+        };
+    }
+
+    /// Jump to the address that is stored in the next 16 bits in memory. See self.next_nn()
     fn jump(&mut self, condition: JumpCondition) {
         match condition {
             JumpCondition::Unconditional => {
                 self.next_nn();
             }
+
             JumpCondition::Zero => {
                 if self.registers.f.zero {
                     self.next_nn();
                 }
             }
+
             JumpCondition::Carry => {
                 if self.registers.f.carry {
                     self.next_nn();
                 }
             }
+
             JumpCondition::NotZero => {
                 if !self.registers.f.zero {
                     self.next_nn();
                 }
             }
+
             JumpCondition::NotCarry => {
                 if !self.registers.f.carry {
                     self.next_nn();
@@ -172,11 +222,9 @@ impl CPU {
 
     #[inline(always)]
     fn next_nn(&mut self) -> u16 {
-        self.pc += 1;
-        let n1 = self.mem.read(self.pc);
+        let n1 = self.mem.read(self.pc + 1);
 
-        self.pc += 1;
-        let n2 = self.mem.read(self.pc);
+        let n2 = self.mem.read(self.pc + 2);
 
         (n2 << 8) as u16 | n1 as u16
     }

@@ -90,6 +90,7 @@ pub enum Instruction {
     SWAP(Arithmetic8BitTarget),
     DAA,
     JP(JumpCondition),
+    JR(JumpCondition),
 }
 
 #[allow(dead_code)]
@@ -245,17 +246,19 @@ impl Instruction {
             // Weird BCA Test that compares a to 9 and 154 (?)
             0x27 => Some(Instruction::DAA),
 
+            // Jump to the memory address stored in pc + 1 | pc + 2
             0xc3 => Some(Instruction::JP(JumpCondition::Unconditional)),
             0xc2 => Some(Instruction::JP(JumpCondition::NotZero)),
             0xd2 => Some(Instruction::JP(JumpCondition::NotCarry)),
             0xca => Some(Instruction::JP(JumpCondition::Zero)),
             0xda => Some(Instruction::JP(JumpCondition::Carry)),
 
-            // 0x18 => Some(Instruction::JR(JumpTest::Always)),
-            // 0x28 => Some(Instruction::JR(JumpTest::Zero)),
-            // 0x38 => Some(Instruction::JR(JumpTest::Carry)),
-            // 0x20 => Some(Instruction::JR(JumpTest::NotZero)),
-            // 0x30 => Some(Instruction::JR(JumpTest::NotCarry)),
+            // Jump to the memory address relative to the current one.
+            0x18 => Some(Instruction::JR(JumpCondition::Unconditional)),
+            0x28 => Some(Instruction::JR(JumpCondition::Zero)),
+            0x38 => Some(Instruction::JR(JumpCondition::Carry)),
+            0x20 => Some(Instruction::JR(JumpCondition::NotZero)),
+            0x30 => Some(Instruction::JR(JumpCondition::NotCarry)),
 
             // 0xe9 => Some(Instruction::JPI),
 
