@@ -2,8 +2,8 @@ use crate::instruction::Arithmetic16BitTarget;
 use crate::instruction::Arithmetic8BitTarget;
 use crate::instruction::Instruction;
 use crate::instruction::Instruction::{
-    AdcHli, AddHli, ADC, ADD, ADDHL, AND, BIT, CCF, CP, CPL, DEC, INC, OR, RESET, RL, RLA, RLC,
-    RLCA, RR, RRA, RRC, RRCA, SBC, SCF, SET, SLA, SRA, SRL, SUB, SWAP, XOR,
+    AdcHli, AddHli, SubHli, ADC, ADD, ADDHL, AND, BIT, CCF, CP, CPL, DEC, INC, OR, RESET, RL, RLA,
+    RLC, RLCA, RR, RRA, RRC, RRCA, SBC, SCF, SET, SLA, SRA, SRL, SUB, SWAP, XOR,
 };
 use crate::registers::Registers;
 
@@ -56,6 +56,7 @@ impl CPU {
             AdcHli => self.add_with_carry_hli(),
             ADDHL(target) => self.add_hl(target),
             SUB(target) => self.subtract(target),
+            SubHli => self.subtract_hli(),
             SBC(target) => self.subtract_with_carry(target),
             AND(target) => self.and(target),
             OR(target) => self.or(target),
@@ -82,6 +83,20 @@ impl CPU {
             SLA(target) => self.sla(target), // shift left arithmetically
             SWAP(target) => self.swap(target), // swap upper & lower nibble
         };
+    }
+
+    #[inline(always)]
+    fn subtract_hli(&mut self) {
+        let address = self.registers.get_hl();
+        let value = self.mem.read(address);
+        let (new_value, overflow) = self.registers.a.overflowing_sub(value);
+
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.subtract = true;
+        self.registers.f.half_carry = (self.registers.a & 0xf) < (value & 0xf);
+        self.registers.f.carry = overflow;
+
+        self.registers.a = new_value;
     }
 
     #[inline(always)]
@@ -466,7 +481,6 @@ impl CPU {
 
     #[inline(always)]
     fn subtract(&mut self, target: Arithmetic8BitTarget) {
-        // TODO implement SUB for HL
         let value = self.read_8bit_register(&target);
         let (new_value, overflow) = self.registers.a.overflowing_sub(value);
 

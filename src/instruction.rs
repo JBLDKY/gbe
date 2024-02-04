@@ -29,6 +29,7 @@ pub enum Instruction {
     AdcHli,
     ADDHL(Arithmetic16BitTarget),
     SUB(Arithmetic8BitTarget),
+    SubHli,
     SBC(Arithmetic8BitTarget),
     AND(Arithmetic8BitTarget),
     OR(Arithmetic8BitTarget),
@@ -85,6 +86,8 @@ impl Instruction {
             // 0x1b => Some(Instruction::DEC(IncDecTarget::DE)),
             // 0x2b => Some(Instruction::DEC(IncDecTarget::HL)),
             // 0x3b => Some(Instruction::DEC(IncDecTarget::SP)),
+
+            // Add
             0x87 => Some(Instruction::ADD(Arithmetic8BitTarget::A)),
             0x80 => Some(Instruction::ADD(Arithmetic8BitTarget::B)),
             0x81 => Some(Instruction::ADD(Arithmetic8BitTarget::C)),
@@ -92,14 +95,18 @@ impl Instruction {
             0x83 => Some(Instruction::ADD(Arithmetic8BitTarget::E)),
             0x84 => Some(Instruction::ADD(Arithmetic8BitTarget::H)),
             0x85 => Some(Instruction::ADD(Arithmetic8BitTarget::L)),
-            0x86 => Some(Instruction::AddHli),
             0xc6 => Some(Instruction::ADD(Arithmetic8BitTarget::D8)),
 
+            // Add memory adress in HL to A.
+            0x86 => Some(Instruction::AddHli),
+
+            // 16 bit add
             0x09 => Some(Instruction::ADDHL(Arithmetic16BitTarget::BC)),
             0x19 => Some(Instruction::ADDHL(Arithmetic16BitTarget::DE)),
             0x29 => Some(Instruction::ADDHL(Arithmetic16BitTarget::HL)),
             0x39 => Some(Instruction::ADDHL(Arithmetic16BitTarget::SP)),
 
+            // Add with carry
             0x8f => Some(Instruction::ADC(Arithmetic8BitTarget::A)),
             0x88 => Some(Instruction::ADC(Arithmetic8BitTarget::B)),
             0x89 => Some(Instruction::ADC(Arithmetic8BitTarget::C)),
@@ -109,6 +116,8 @@ impl Instruction {
             0x8d => Some(Instruction::ADC(Arithmetic8BitTarget::L)),
             0xce => Some(Instruction::ADC(Arithmetic8BitTarget::D8)),
             0x8e => Some(Instruction::AdcHli),
+
+            // Subtract
             0x97 => Some(Instruction::SUB(Arithmetic8BitTarget::A)),
             0x90 => Some(Instruction::SUB(Arithmetic8BitTarget::B)),
             0x91 => Some(Instruction::SUB(Arithmetic8BitTarget::C)),
@@ -116,8 +125,10 @@ impl Instruction {
             0x93 => Some(Instruction::SUB(Arithmetic8BitTarget::E)),
             0x94 => Some(Instruction::SUB(Arithmetic8BitTarget::H)),
             0x95 => Some(Instruction::SUB(Arithmetic8BitTarget::L)),
-            // 0x96 => Some(Instruction::SUB(Arithmetic8BitTarget::HLI)),
             0xd6 => Some(Instruction::SUB(Arithmetic8BitTarget::D8)),
+
+            // Subtract memory address value in HL from a
+            0x96 => Some(Instruction::SubHli),
 
             0x9f => Some(Instruction::SBC(Arithmetic8BitTarget::A)),
             0x98 => Some(Instruction::SBC(Arithmetic8BitTarget::B)),
