@@ -795,6 +795,7 @@ impl Instruction {
 
             0xFA => Some(Instruction::LD(LoadVariant::MemToRegA16(LoadTarget::A))),
             0xEA => Some(Instruction::LD(LoadVariant::RegAToMemA16(LoadTarget::A))),
+
             _ => None,
         }
     }

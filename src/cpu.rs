@@ -165,9 +165,18 @@ impl CPU {
                 (self.pc.wrapping_add(1), 4);
             }
             LD(variant) => match variant {
+                LoadVariant::RegToReg(destination, source) => {
+                    self.load_register_into_register(destination, source)
+                }
                 _ => unimplemented!(),
             },
         }
+    }
+
+    #[inline(always)]
+    fn load_register_into_register(&mut self, destination: LoadTarget, source: LoadTarget) {
+        let value = self.read_load_target_register(&source);
+        self.write_load_target_register(&destination, value);
     }
 
     #[inline(always)]
@@ -1101,6 +1110,34 @@ impl CPU {
             Arithmetic16BitTarget::BC => self.registers.get_bc(),
             Arithmetic16BitTarget::DE => self.registers.get_de(),
             Arithmetic16BitTarget::SP => self.sp,
+        }
+    }
+
+    #[inline(always)]
+    fn read_load_target_register(&self, target: &LoadTarget) -> u8 {
+        match target {
+            LoadTarget::A => self.registers.a,
+            LoadTarget::B => self.registers.b,
+            LoadTarget::C => self.registers.c,
+            LoadTarget::D => self.registers.d,
+            LoadTarget::E => self.registers.e,
+            LoadTarget::H => self.registers.h,
+            LoadTarget::L => self.registers.l,
+            _ => unimplemented!(),
+        }
+    }
+
+    #[inline(always)]
+    fn write_load_target_register(&self, target: &LoadTarget, value: u8) -> u8 {
+        match target {
+            LoadTarget::A => self.registers.a = value,
+            LoadTarget::B => self.registers.b = value,
+            LoadTarget::C => self.registers.c = value,
+            LoadTarget::D => self.registers.d = value,
+            LoadTarget::E => self.registers.e = value,
+            LoadTarget::H => self.registers.h = value,
+            LoadTarget::L => self.registers.l = value,
+            _ => unimplemented!(),
         }
     }
 
