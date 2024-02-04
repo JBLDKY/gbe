@@ -2,26 +2,31 @@ use crate::instruction::Arithmetic16BitTarget;
 use crate::instruction::Arithmetic8BitTarget;
 use crate::instruction::Instruction;
 use crate::instruction::Instruction::{
-    ADC, ADD, ADDHL, ADDHLI, AND, BIT, CCF, CP, CPL, DEC, INC, OR, RESET, RL, RLA, RLC, RLCA, RR,
-    RRA, RRC, RRCA, SBC, SCF, SET, SLA, SRA, SRL, SUB, SWAP, XOR,
+    AdcHli, AddHli, ADC, ADD, ADDHL, AND, BIT, CCF, CP, CPL, DEC, INC, OR, RESET, RL, RLA, RLC,
+    RLCA, RR, RRA, RRC, RRCA, SBC, SCF, SET, SLA, SRA, SRL, SUB, SWAP, XOR,
 };
 use crate::registers::Registers;
 
 #[allow(dead_code)]
-struct MemoryBus {
-    memory: [u8; 0xFFFF],
+struct Mem {
+    address: [u8; 0xFFFF],
 }
 
 #[allow(dead_code)]
-impl MemoryBus {
-    fn read_byte(&self, address: u16) -> u8 {
-        self.memory[address as usize]
+impl Mem {
+    fn read(&self, hex: u16) -> u8 {
+        self.address[hex as usize]
+    }
+
+    fn write(&mut self, hex: u16, value: u8) {
+        self.address[hex as usize] = value;
     }
 }
 
 #[allow(dead_code)]
 pub struct CPU {
     registers: Registers,
+    mem: Mem,
     sp: u16, // Stack Pointer
     pc: u16, // Program Counter
 }
@@ -31,6 +36,9 @@ impl CPU {
     pub fn new() -> CPU {
         CPU {
             registers: Registers::new(),
+            mem: Mem {
+                address: [0x00; 0xFFFF],
+            },
             sp: 0x00,
             pc: 0x00,
         }
@@ -43,8 +51,9 @@ impl CPU {
     fn exec(&mut self, instruction: Instruction) {
         match instruction {
             ADD(target) => self.add(target),
-            ADDHLI(target) => self.addhli(target),
+            AddHli => self.add_hli(),
             ADC(target) => self.add_with_carry(target),
+            AdcHli => self.add_with_carry_hli(),
             ADDHL(target) => self.add_hl(target),
             SUB(target) => self.subtract(target),
             SBC(target) => self.subtract_with_carry(target),
@@ -73,6 +82,35 @@ impl CPU {
             SLA(target) => self.sla(target), // shift left arithmetically
             SWAP(target) => self.swap(target), // swap upper & lower nibble
         };
+    }
+
+    #[inline(always)]
+    fn add_with_carry_hli(&mut self) {
+        let address = self.registers.get_hl();
+        let value = self.mem.read(address);
+        let (new_value, overflow) = self
+            .registers
+            .a
+            .overflowing_add(value + self.registers.f.carry as u8);
+
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.carry = overflow;
+        self.registers.f.subtract = false;
+        self.registers.f.half_carry = ((self.registers.a & 0xf) + (value & 0xf)) & 0x10 == 0x10;
+
+        self.registers.a = new_value;
+    }
+
+    #[inline(always)]
+    fn add_hli(&mut self) {
+        let address = self.registers.get_hl();
+        let value = self.mem.read(address);
+        let new_value = self.registers.a.wrapping_add(value);
+
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.subtract = false;
+        self.registers.f.half_carry = ((self.registers.a & 0xf) + (value & 0xf)) & 0x10 == 0x10;
+        self.registers.a = new_value;
     }
 
     #[inline(always)]
@@ -442,7 +480,6 @@ impl CPU {
 
     #[inline(always)]
     fn add_with_carry(&mut self, target: Arithmetic8BitTarget) {
-        // TODO: Implement ADC for HL
         let value = self.read_8bit_register(&target);
         let (new_value, overflow) = self
             .registers
@@ -460,20 +497,6 @@ impl CPU {
     #[inline(always)]
     fn add(&mut self, target: Arithmetic8BitTarget) {
         let value = self.read_8bit_register(&target);
-
-        let new_value = self.registers.a.wrapping_add(value);
-
-        self.registers.f.zero = new_value == 0;
-        self.registers.f.subtract = false;
-
-        self.registers.f.half_carry = ((self.registers.a & 0xf) + (value & 0xf)) & 0x10 == 0x10;
-
-        self.registers.a = new_value;
-    }
-
-    #[inline(always)]
-    fn addhli(&mut self, target: Arithmetic8BitTarget) {
-        let value = self.registers.get_hl();
 
         let new_value = self.registers.a.wrapping_add(value);
 

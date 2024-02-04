@@ -24,8 +24,9 @@ pub enum Arithmetic8BitTarget {
 #[allow(dead_code)]
 pub enum Instruction {
     ADD(Arithmetic8BitTarget),
-    ADD_HLI,
+    AddHli,
     ADC(Arithmetic8BitTarget),
+    AdcHli,
     ADDHL(Arithmetic16BitTarget),
     SUB(Arithmetic8BitTarget),
     SBC(Arithmetic8BitTarget),
@@ -91,7 +92,7 @@ impl Instruction {
             0x83 => Some(Instruction::ADD(Arithmetic8BitTarget::E)),
             0x84 => Some(Instruction::ADD(Arithmetic8BitTarget::H)),
             0x85 => Some(Instruction::ADD(Arithmetic8BitTarget::L)),
-            0x86 => Some(Instruction::ADD_HLI),
+            0x86 => Some(Instruction::AddHli),
             0xc6 => Some(Instruction::ADD(Arithmetic8BitTarget::D8)),
 
             0x09 => Some(Instruction::ADDHL(Arithmetic16BitTarget::BC)),
@@ -106,9 +107,8 @@ impl Instruction {
             0x8b => Some(Instruction::ADC(Arithmetic8BitTarget::E)),
             0x8c => Some(Instruction::ADC(Arithmetic8BitTarget::H)),
             0x8d => Some(Instruction::ADC(Arithmetic8BitTarget::L)),
-            // 0x8e => Some(Instruction::ADC(Arithmetic8BitTarget::HLI)),
             0xce => Some(Instruction::ADC(Arithmetic8BitTarget::D8)),
-
+            0x8e => Some(Instruction::AdcHli),
             0x97 => Some(Instruction::SUB(Arithmetic8BitTarget::A)),
             0x90 => Some(Instruction::SUB(Arithmetic8BitTarget::B)),
             0x91 => Some(Instruction::SUB(Arithmetic8BitTarget::C)),
