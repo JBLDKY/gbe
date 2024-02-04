@@ -78,6 +78,7 @@ pub enum Instruction {
     SRA(Arithmetic8BitTarget),
     SLA(Arithmetic8BitTarget),
     SWAP(Arithmetic8BitTarget),
+    DAA,
 }
 
 #[allow(dead_code)]
@@ -221,6 +222,7 @@ impl Instruction {
             // Compare values with HLI
             0xbe => Some(Instruction::CpHli),
 
+            // Straightforward rotations of specific registers
             0x3f => Some(Instruction::CCF),
             0x37 => Some(Instruction::SCF),
             0x1f => Some(Instruction::RRA),
@@ -229,7 +231,8 @@ impl Instruction {
             0x07 => Some(Instruction::RLCA),
             0x2f => Some(Instruction::CPL),
 
-            // 0x27 => Some(Instruction::DAA),
+            // Weird BCA Test that compares a to 9 and 154 (?)
+            0x27 => Some(Instruction::DAA),
 
             // 0xc3 => Some(Instruction::JP(JumpTest::Always)),
             // 0xc2 => Some(Instruction::JP(JumpTest::NotZero)),

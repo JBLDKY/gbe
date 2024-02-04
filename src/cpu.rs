@@ -4,8 +4,8 @@ use crate::instruction::Arithmetic8BitTarget;
 use crate::instruction::Instruction;
 use crate::instruction::Instruction::{
     AdcHli, AddHli, AndHli, CpHli, OrHli, SbcHli, SubHli, XorHli, ADC, ADD, ADDHL, ADDSPN, AND,
-    BIT, CCF, CP, CPL, DEC, INC, OR, RESET, RL, RLA, RLC, RLCA, RR, RRA, RRC, RRCA, SBC, SCF, SET,
-    SLA, SRA, SRL, SUB, SWAP, XOR,
+    BIT, CCF, CP, CPL, DAA, DEC, INC, OR, RESET, RL, RLA, RLC, RLCA, RR, RRA, RRC, RRCA, SBC, SCF,
+    SET, SLA, SRA, SRL, SUB, SWAP, XOR,
 };
 use crate::registers::Registers;
 
@@ -86,7 +86,28 @@ impl CPU {
             SRA(target) => self.sra(target),           // shift right arithmetically
             SLA(target) => self.sla(target),           // shift left arithmetically
             SWAP(target) => self.swap(target),         // swap upper & lower nibble
+            DAA => self.daa(),
         };
+    }
+
+    /// Source: http://z80-heaven.wikidot.com/instructions-set:daa
+    /// When this instruction is executed, the A register is BCD corrected using the contents of the flags. The exact process is the following:
+    /// if the least significant four bits of A contain a non-BCD digit (i. e. it is greater than 9)
+    /// or the H flag is set, then $06 is added to the register.
+    ///
+    /// Then the four most significant bits are checked.
+    /// If this more significant digit also happens to be greater than 9 or the C flag is set, then $60 is added.
+    fn daa(&mut self) {
+        // TODO test
+        let value = self.read_8bit_register(&Arithmetic8BitTarget::A);
+
+        if value & 0xF > 0b1001 || self.registers.f.half_carry == true {
+            self.modify_8bit_register(Arithmetic8BitTarget::A, |value| value + 0b0110);
+        }
+
+        if value >> 4 > 0b1001 {
+            self.modify_8bit_register(Arithmetic8BitTarget::A, |value| value + 0b0110_0000);
+        }
     }
 
     fn add_sp_n(&mut self) {
@@ -97,7 +118,7 @@ impl CPU {
 
         self.registers.f.zero = false;
         self.registers.f.subtract = false;
-        // Edge cases https://stackoverflow.com/questions/57958631/game-boy-half-carry-flag-and-16-bit-instructions-especially-opcode-0xe8
+        // Edge case explaination https://stackoverflow.com/questions/57958631/game-boy-half-carry-flag-and-16-bit-instructions-especially-opcode-0xe8
         self.registers.f.half_carry = ((sp & 0xF) + (value & 0xF)) > 0x10;
         self.registers.f.carry = ((sp & 0xFF) + (value & 0xFF)) > 0x100;
 
