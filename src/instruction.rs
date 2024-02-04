@@ -9,7 +9,7 @@ pub enum Arithmetic16BitTarget {
 
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
-pub enum PushTarget {
+pub enum StackTarget {
     HL,
     BC,
     AF,
@@ -101,7 +101,9 @@ pub enum Instruction {
     JP(JumpCondition),
     JR(JumpCondition),
     JpHli,
-    PUSH(PushTarget),
+    PUSH(StackTarget),
+    POP(StackTarget),
+    CALL(JumpCondition),
 }
 
 #[allow(dead_code)]
@@ -616,21 +618,24 @@ impl Instruction {
             // 0x08 => Some(Instruction::LD(LoadType::IndirectFromSP)),
             // 0xf9 => Some(Instruction::LD(LoadType::SPFromHL)),
             // 0xf8 => Some(Instruction::LD(LoadType::HLFromSPN)),
+
+            // Push one of the 16 bit registers onto the stack.
             0xc5 => Some(Instruction::PUSH(StackTarget::BC)),
             0xd5 => Some(Instruction::PUSH(StackTarget::DE)),
             0xe5 => Some(Instruction::PUSH(StackTarget::HL)),
             0xf5 => Some(Instruction::PUSH(StackTarget::AF)),
 
-            // 0xc1 => Some(Instruction::POP(StackTarget::BC)),
-            // 0xd1 => Some(Instruction::POP(StackTarget::DE)),
-            // 0xe1 => Some(Instruction::POP(StackTarget::HL)),
-            // 0xf1 => Some(Instruction::POP(StackTarget::AF)),
+            // Pop one of the 16 bit registers onto the stack.
+            0xc1 => Some(Instruction::POP(StackTarget::BC)),
+            0xd1 => Some(Instruction::POP(StackTarget::DE)),
+            0xe1 => Some(Instruction::POP(StackTarget::HL)),
+            0xf1 => Some(Instruction::POP(StackTarget::AF)),
 
-            // 0xc4 => Some(Instruction::CALL(JumpTest::NotZero)),
-            // 0xd4 => Some(Instruction::CALL(JumpTest::NotCarry)),
-            // 0xcc => Some(Instruction::CALL(JumpTest::Zero)),
-            // 0xdc => Some(Instruction::CALL(JumpTest::Carry)),
-            // 0xcd => Some(Instruction::CALL(JumpTest::Always)),
+            0xc5 => Some(Instruction::CALL(JumpCondition::NotZero)),
+            0xd4 => Some(Instruction::CALL(JumpCondition::NotCarry)),
+            0xcc => Some(Instruction::CALL(JumpCondition::Zero)),
+            0xdc => Some(Instruction::CALL(JumpCondition::Carry)),
+            0xcd => Some(Instruction::CALL(JumpCondition::Unconditional)),
 
             // 0xc0 => Some(Instruction::RET(JumpTest::NotZero)),
             // 0xd0 => Some(Instruction::RET(JumpTest::NotCarry)),
@@ -651,6 +656,7 @@ impl Instruction {
             // 0x00 => Some(Instruction::NOP),
             // 0x76 => Some(Instruction::HALT),
             // 0xf3 => Some(Instruction::DI),
+            //
             // 0xfb => Some(Instruction::EI),
             _ => None,
         }
