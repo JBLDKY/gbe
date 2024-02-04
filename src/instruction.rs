@@ -7,6 +7,33 @@ pub enum Arithmetic16BitTarget {
     DE,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum RSTLocation {
+    X00,
+    X08,
+    X10,
+    X18,
+    X20,
+    X28,
+    X30,
+    X38,
+}
+
+impl RSTLocation {
+    pub fn to_hex(&self) -> u16 {
+        match self {
+            RSTLocation::X00 => 0x00,
+            RSTLocation::X08 => 0x08,
+            RSTLocation::X10 => 0x10,
+            RSTLocation::X18 => 0x18,
+            RSTLocation::X20 => 0x20,
+            RSTLocation::X28 => 0x28,
+            RSTLocation::X30 => 0x30,
+            RSTLocation::X38 => 0x38,
+        }
+    }
+}
+
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
 pub enum StackTarget {
@@ -105,6 +132,12 @@ pub enum Instruction {
     POP(StackTarget),
     CALL(JumpCondition),
     RET(JumpCondition),
+    RETI,
+    RST(RSTLocation),
+    NOP,
+    HALT,
+    EI,
+    DI,
 }
 
 #[allow(dead_code)]
@@ -646,23 +679,30 @@ impl Instruction {
             0xd8 => Some(Instruction::RET(JumpCondition::Carry)),
             0xc9 => Some(Instruction::RET(JumpCondition::Unconditional)),
 
-            // RET with the HL register
-            // 0xd9 => Some(Instruction::RETI),
+            // Return from interrupt and re-enable interrupts
+            0xd9 => Some(Instruction::RETI),
 
-            // 0xc7 => Some(Instruction::RST(RSTLocation::X00)),
-            // 0xd7 => Some(Instruction::RST(RSTLocation::X10)),
-            // 0xe7 => Some(Instruction::RST(RSTLocation::X20)),
-            // 0xf7 => Some(Instruction::RST(RSTLocation::X30)),
-            // 0xcf => Some(Instruction::RST(RSTLocation::X08)),
-            // 0xdf => Some(Instruction::RST(RSTLocation::X18)),
-            // 0xef => Some(Instruction::RST(RSTLocation::X28)),
-            // 0xff => Some(Instruction::RST(RSTLocation::X38)),
+            // Call the fixed address indicated by the RST location
+            0xc7 => Some(Instruction::RST(RSTLocation::X00)),
+            0xd7 => Some(Instruction::RST(RSTLocation::X10)),
+            0xe7 => Some(Instruction::RST(RSTLocation::X20)),
+            0xf7 => Some(Instruction::RST(RSTLocation::X30)),
+            0xcf => Some(Instruction::RST(RSTLocation::X08)),
+            0xdf => Some(Instruction::RST(RSTLocation::X18)),
+            0xef => Some(Instruction::RST(RSTLocation::X28)),
+            0xff => Some(Instruction::RST(RSTLocation::X38)),
 
-            // 0x00 => Some(Instruction::NOP),
-            // 0x76 => Some(Instruction::HALT),
-            // 0xf3 => Some(Instruction::DI),
-            //
-            // 0xfb => Some(Instruction::EI),
+            // (No Operation): A placeholder instruction that does nothing and is typically used for timing adjustments or as a placeholder for future code.
+            0x00 => Some(Instruction::NOP),
+
+            // Halts the CPU until an interrupt occurs. It's used to reduce power consumption and CPU activity until it's necessary to respond to an interrupt.
+            0x76 => Some(Instruction::HALT),
+
+            // (Disable Interrupts): Disables all interrupts, preventing the CPU from handling interrupt requests until they are re-enabled.
+            0xf3 => Some(Instruction::DI),
+
+            // (Enable Interrupts): Enables interrupts, allowing the CPU to respond to interrupt requests.
+            0xfb => Some(Instruction::EI),
             _ => None,
         }
     }

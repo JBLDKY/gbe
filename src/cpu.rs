@@ -4,8 +4,9 @@ use crate::instruction::Arithmetic8BitTarget;
 use crate::instruction::Instruction;
 use crate::instruction::Instruction::{
     AdcHli, AddHli, AndHli, CpHli, JpHli, OrHli, SbcHli, SubHli, XorHli, ADC, ADD, ADDHL, ADDSPN,
-    AND, BIT, CALL, CCF, CP, CPL, DAA, DEC, INC, JP, JR, OR, POP, PUSH, RESET, RET, RL, RLA, RLC,
-    RLCA, RR, RRA, RRC, RRCA, SBC, SCF, SET, SLA, SRA, SRL, SUB, SWAP, XOR,
+    AND, BIT, CALL, CCF, CP, CPL, DAA, DEC, DI, EI, HALT, INC, JP, JR, NOP, OR, POP, PUSH, RESET,
+    RET, RETI, RL, RLA, RLC, RLCA, RR, RRA, RRC, RRCA, RST, SBC, SCF, SET, SLA, SRA, SRL, SUB,
+    SWAP, XOR,
 };
 use crate::instruction::JumpCondition;
 use crate::instruction::StackTarget;
@@ -129,8 +130,40 @@ impl CPU {
             }
             CALL(condition) => self.call(condition), // jump relative from PC
             RET(condition) => self.r#return(condition), // Pop the top of the stack basically
-                                                      // returning
-        };
+            RETI => self.return_from_interrupt(),    // Return from interrupt
+            RST(location) => {
+                self.rst();
+                // need to return this or somehow deal with the stack
+                location.to_hex();
+            }
+            NOP => {
+                (self.pc.wrapping_add(1), 4);
+            }
+            HALT => {
+                // self.is_halted = true;
+                (self.pc.wrapping_add(1), 4);
+            }
+            DI => {
+                // self.interrupts_enabled = false;
+                (self.pc.wrapping_add(1), 4);
+            }
+
+            EI => {
+                // self.interrupts_enabled = true;
+                (self.pc.wrapping_add(1), 4);
+            }
+        }
+    }
+
+    #[inline(always)]
+    fn rst(&mut self) {
+        self.push(self.pc.wrapping_add(1));
+    }
+
+    #[inline(always)]
+    fn return_from_interrupt(&mut self) {
+        // probably return
+        self.pop();
     }
 
     #[inline(always)]
