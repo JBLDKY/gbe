@@ -200,6 +200,7 @@ pub enum LoadTarget {
 #[allow(dead_code)]
 pub enum LoadVariant {
     RegToReg(LoadTarget, LoadTarget),
+    // IMPLEMENTED
     MemToReg(LoadTarget, u16),    // Memory address to LoadTarget
     RegToMem(u16, LoadTarget),    // LoadTarget to Memory address
     ImmToReg(LoadTarget),         // Immediate value to LoadTarget
@@ -207,6 +208,7 @@ pub enum LoadVariant {
     ImmToMemIndirect(LoadTarget), // Immediate value to Indirect Memory
     RegToRegIndirect(LoadTarget, LoadTarget), // LoadTarget to indirect address of another LoadTarget
     MemIndirectToReg(LoadTarget, LoadTarget), // Memory indirect through LoadTarget to LoadTarget
+    // IMPLEMENTED
     MemIndirectToRegIncHL(LoadTarget, LoadTarget), // Memory indirect (HL incremented) to Register
     MemIndirectToRegDecHL(LoadTarget, LoadTarget), // Memory indirect (HL decremented) to Register
     RegToMemIndirect(LoadTarget, LoadTarget),
@@ -765,20 +767,20 @@ impl Instruction {
             ))),
 
             0x02 => Some(Instruction::LD(LoadVariant::RegToMemIndirect(
-                LoadTarget::A,
                 LoadTarget::BC,
+                LoadTarget::A,
             ))),
             0x12 => Some(Instruction::LD(LoadVariant::RegToMemIndirect(
-                LoadTarget::A,
                 LoadTarget::DE,
+                LoadTarget::A,
             ))),
             0x22 => Some(Instruction::LD(LoadVariant::RegToMemIndirectInc(
-                LoadTarget::A,
                 LoadTarget::HL,
+                LoadTarget::A,
             ))),
             0x32 => Some(Instruction::LD(LoadVariant::RegToMemIndirectDec(
-                LoadTarget::A,
                 LoadTarget::HL,
+                LoadTarget::A,
             ))),
 
             0xF0 => Some(Instruction::LD(LoadVariant::MemOffsetToReg(LoadTarget::A))),

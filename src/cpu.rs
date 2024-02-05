@@ -168,10 +168,108 @@ impl CPU {
                 LoadVariant::RegToReg(destination, source) => {
                     self.load_register_into_register(destination, source)
                 }
-                LoadVariant::MemIndirectToReg(destination, source) => {}
+                LoadVariant::MemIndirectToReg(destination, source) => {
+                    self.load_mem_indirect_to_reg(destination, source)
+                }
+                LoadVariant::MemIndirectToRegIncHL(destination, source) => {
+                    self.load_mem_indirect_to_reg_inc_hl(destination, source)
+                }
+                LoadVariant::MemIndirectToRegDecHL(destination, source) => {
+                    self.load_mem_indirect_to_reg_dec_hl(destination, source)
+                }
+                LoadVariant::RegToMemIndirect(destination, source) => {
+                    let address = match destination {
+                        LoadTarget::HLI => self.registers.get_hl(),
+                        LoadTarget::BC => self.registers.get_bc(),
+                        LoadTarget::DE => self.registers.get_de(),
+                        LoadTarget::C => {
+                            0xFF00 | self.read_load_target_register(&destination) as u16
+                        }
+                        _ => unimplemented!(),
+                    };
+
+                    let value = self.read_load_target_register(&source);
+                    self.mem.write(address, value);
+                }
+
+                LoadVariant::ImmToReg(destination) => {
+                    let value = self.next();
+                    self.write_load_target_register(&destination, value);
+                }
+
+                LoadVariant::ImmToMemIndirect(destination) => {
+                    let value = self.next();
+                    self.write_load_target_register(&destination, value);
+                }
+
+                LoadVariant::RegToMemIndirectInc(_, source) => {
+                    let value = self.read_load_target_register(&source);
+                    let address = self.registers.get_hl();
+                    self.registers.set_hl(address.wrapping_add(1));
+                    self.mem.write(address, value);
+                }
+
+                LoadVariant::RegToMemIndirectDec(_, source) => {
+                    let value = self.read_load_target_register(&source);
+                    let address = self.registers.get_hl();
+                    self.registers.set_hl(address.wrapping_sub(1));
+                    self.mem.write(address, value);
+                }
+
+                LoadVariant::MemOffsetToReg(target) => {
+                    let offset = self.next();
+                    let address = 0xFF00 + offset as u16;
+                    let value = self.mem.read(address);
+                    self.write_load_target_register(&target, value);
+                }
+
+                LoadVariant::RegToMemOffset(target) => {
+                    let offset = self.next();
+                    let address = 0xFF00 + offset as u16;
+                    let value = self.read_load_target_register(&target);
+                    self.mem.write(address, value);
+                }
+
+                LoadVariant::MemToRegA16(target) => {
+                    let lower = self.next();
+                    let upper = self.next();
+                    let address = ((upper as u16) << 8) | lower as u16;
+                    let value = self.mem.read(address);
+                    self.write_load_target_register(&target, value);
+                }
+
+                LoadVariant::RegAToMemA16(target) => {
+                    let lower = self.next();
+                    let upper = self.next();
+                    let address = ((upper as u16) << 8) | lower as u16;
+                    let value = self.read_load_target_register(&target);
+                    self.mem.write(address, value);
+                }
+
                 _ => unimplemented!(),
             },
         }
+    }
+
+    #[inline(always)]
+    fn load_reg_to_mem_indirect(&mut self, _: LoadTarget, source: LoadTarget) {
+        let value = self.read_load_target_register(&source);
+        let address = self.registers.get_hl();
+        self.mem.write(address, value);
+    }
+
+    #[inline(always)]
+    fn load_mem_indirect_to_reg_dec_hl(&mut self, _: LoadTarget, _: LoadTarget) {
+        let value = self.registers.get_hl();
+        self.registers.set_hl(value.wrapping_sub(1));
+        self.mem.read(value);
+    }
+
+    #[inline(always)]
+    fn load_mem_indirect_to_reg_inc_hl(&mut self, _: LoadTarget, _: LoadTarget) {
+        let value = self.registers.get_hl();
+        self.registers.set_hl(value.wrapping_add(1));
+        self.mem.read(value);
     }
 
     #[inline(always)]
