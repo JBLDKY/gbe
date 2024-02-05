@@ -76,6 +76,18 @@ impl CPU {
         }
     }
 
+    fn step(&mut self) {
+        let mut instruction_byte = self.mem.read(self.pc);
+
+        let next_pc = if let Some(instruction) = Instruction::from_byte(instruction_byte) {
+            self.exec(instruction)
+        } else {
+            panic!("UNKOWN INSTRUCTION FOUND FOR: 0X{:x}", instruction_byte);
+        };
+
+        self.pc = next_pc;
+    }
+
     fn exec(&mut self, instruction: Instruction) {
         match instruction {
             ADD(target) => self.add(target),
@@ -168,15 +180,19 @@ impl CPU {
                 LoadVariant::RegToReg(destination, source) => {
                     self.load_register_into_register(destination, source)
                 }
+
                 LoadVariant::MemIndirectToReg(destination, source) => {
                     self.load_mem_indirect_to_reg(destination, source)
                 }
+
                 LoadVariant::MemIndirectToRegIncHL(destination, source) => {
                     self.load_mem_indirect_to_reg_inc_hl(destination, source)
                 }
+
                 LoadVariant::MemIndirectToRegDecHL(destination, source) => {
                     self.load_mem_indirect_to_reg_dec_hl(destination, source)
                 }
+
                 LoadVariant::RegToMemIndirect(destination, source) => {
                     let address = match destination {
                         LoadTarget::HLI => self.registers.get_hl(),

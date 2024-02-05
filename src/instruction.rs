@@ -222,7 +222,7 @@ pub enum LoadVariant {
 
 #[allow(dead_code)]
 impl Instruction {
-    fn from_byte(byte: u8) -> Option<Instruction> {
+    pub fn from_byte(byte: u8) -> Option<Instruction> {
         match byte {
             // Increment
             0x3c => Some(Instruction::INC(AnyTarget::A)),
