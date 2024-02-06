@@ -422,19 +422,7 @@ impl CPU {
                     (self.pc.wrapping_add(3), 16)
                 }
 
-                LoadVariant::ImmWordToReg => {
-                    let address = self.next_nn();
-
-                    let lower = (self.sp & 0xFF) as u8;
-                    self.mem.write(address, lower);
-
-                    let higher = (self.sp >> 8) as u8;
-                    self.mem.write(address.wrapping_add(1), higher);
-
-                    (self.pc.wrapping_add(3), 20)
-                }
-
-                LoadVariant::StackPointerToMem(target) => {
+                LoadVariant::ImmWordToReg(target) => {
                     let value = self.next_nn();
 
                     match target {
@@ -445,6 +433,18 @@ impl CPU {
                         _ => unimplemented!(),
                     }
                     (self.pc.wrapping_add(3), 12)
+                }
+
+                LoadVariant::StackPointerToMem => {
+                    let address = self.next_nn();
+
+                    let lower = (self.sp & 0xFF) as u8;
+                    self.mem.write(address, lower);
+
+                    let higher = (self.sp >> 8) as u8;
+                    self.mem.write(address.wrapping_add(1), higher);
+
+                    (self.pc.wrapping_add(3), 20)
                 }
 
                 _ => unimplemented!(),

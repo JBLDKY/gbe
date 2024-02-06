@@ -220,8 +220,8 @@ pub enum LoadVariant {
     MemToRegA16(LoadTarget),
     RegAToMemA16(LoadTarget),
 
-    ImmWordToReg,                  // 0x[0-3]1
-    StackPointerToMem(LoadTarget), // 0x08
+    ImmWordToReg(LoadTarget), // 0x[0-3]1
+    StackPointerToMem,        // 0x08
 }
 
 #[allow(dead_code)]
