@@ -1,18 +1,34 @@
 mod cpu;
 mod flags_registers;
-mod registers;
 mod instruction;
+mod registers;
+use crate::cpu::CPU;
 use std::fs::File;
 use std::io::{self, Read};
+use std::thread::sleep;
+use std::time::Duration;
 
 fn main() {
-    let a: u8 = 0b1000_1011;
-    dbg!(a as i8);
+    let rom = buffer_from_file("/home/jord/projects/gbe/roms/yu_gi_oh_dungeon_dice_monsters.gba")
+        .expect("invalid rom");
 
-    let right = a.rotate_right(1);
-    println!("{}", format!("{right:b}"));
+    let mut cpu = CPU::new(&rom);
+    let mut cycles = 0;
 
-    // bit #6
+    loop {
+        // count cycles
+        cycles += cpu.step() as usize;
+
+        // Dont run as if on steroids
+        sleep(Duration::from_nanos(20));
+
+        if cycles > 1000 {
+            // Stop early in case pc blows up
+            break;
+        };
+    }
+
+    dbg!(cycles);
 }
 
 fn buffer_from_file(path: &str) -> io::Result<Vec<u8>> {
