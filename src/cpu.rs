@@ -1,4 +1,6 @@
 #![allow(dead_code)]
+use log::{debug, info};
+
 use crate::instruction::AnyTarget;
 use crate::instruction::Arithmetic16BitTarget;
 use crate::instruction::Arithmetic8BitTarget;
@@ -35,48 +37,49 @@ const INTERRUPT_REGISTER: usize = 0xFFFF;
 
 const HIGH_RAM_START: usize = 0xFF80;
 const HIGH_RAM_END: usize = 0xFFFE;
-const HIGH_RAM: usize = HIGH_RAM_END - HIGH_RAM_START;
+const HIGH_RAM: usize = HIGH_RAM_END - HIGH_RAM_START + 1;
 
 const RESTRICTED_HIGH_START: usize = 0xFF80;
 const RESTRICTED_HIGH_END: usize = 0xFFFE;
-const RESTRICTED_HIGH: usize = RESTRICTED_HIGH_END - RESTRICTED_HIGH_START;
+const RESTRICTED_HIGH: usize = RESTRICTED_HIGH_END - RESTRICTED_HIGH_START + 1;
 
-const INPUT_OUTPUT: usize = INPUT_OUTPUT_END - INPUT_OUTPUT_START;
+const INPUT_OUTPUT: usize = INPUT_OUTPUT_END - INPUT_OUTPUT_START + 1;
 const INPUT_OUTPUT_START: usize = 0xFF00;
 const INPUT_OUTPUT_END: usize = 0xFF4B;
 
 const RESTRICTED_MID_START: usize = 0xFEA0;
 const RESTRICTED_MID_END: usize = 0xFEFF;
-const RESTRICTED_MID: usize = RESTRICTED_MID_END - RESTRICTED_MID_START;
+const RESTRICTED_MID: usize = RESTRICTED_MID_END - RESTRICTED_MID_START + 1;
 
-const SPRITE: usize = SPRITE_END - SPRITE_START;
+const SPRITE: usize = SPRITE_END - SPRITE_START + 1;
 const SPRITE_START: usize = 0xFE00;
 const SPRITE_END: usize = 0xFE9F;
 
 const RESTRICTED_LOW_START: usize = 0xE000;
 const RESTRICTED_LOW_END: usize = 0xFDFF;
-const RESTRICTED_LOW: usize = RESTRICTED_LOW_END - RESTRICTED_LOW_START;
+const RESTRICTED_LOW: usize = RESTRICTED_LOW_END - RESTRICTED_LOW_START + 1;
 
-const INTERNAL_RAM: usize = INTERNAL_RAM_END - INTERNAL_RAM_START;
+const INTERNAL_RAM: usize = INTERNAL_RAM_END - INTERNAL_RAM_START + 1;
 const INTERNAL_RAM_START: usize = 0xC000;
 const INTERNAL_RAM_END: usize = 0xDFFF;
 
-const SWITCH_RAM: usize = SWITCH_RAM_END - SWITCH_RAM_START;
+const SWITCH_RAM: usize = SWITCH_RAM_END - SWITCH_RAM_START + 1;
 const SWITCH_RAM_START: usize = 0xA000;
 const SWITCH_RAM_END: usize = 0xBFFF;
 
-const VIDEO_RAM: usize = VIDEO_RAM_END - VIDEO_RAM_START;
+const VIDEO_RAM: usize = VIDEO_RAM_END - VIDEO_RAM_START + 1;
 const VIDEO_RAM_START: usize = 0x8000;
 const VIDEO_RAM_END: usize = 0x9FFF;
 
-const SWITCH_ROM: usize = SWITCH_ROM_END - SWITCH_ROM_START;
+const SWITCH_ROM: usize = SWITCH_ROM_END - SWITCH_ROM_START + 1;
 const SWITCH_ROM_START: usize = 0x4000;
 const SWITCH_ROM_END: usize = 0x7FFF;
 
-const ROM: usize = ROM_END - ROM_START;
+const ROM: usize = ROM_END - ROM_START + 1;
 const ROM_START: usize = 0x0000;
 const ROM_END: usize = 0x3FFF;
 
+#[derive(Debug)]
 struct Mem {
     address: [u8; 0xFFFF],
     rom: [u8; ROM],
@@ -177,8 +180,9 @@ impl Mem {
 }
 
 #[allow(dead_code)]
+#[derive(Debug)]
 pub struct CPU {
-    registers: Registers,
+    pub registers: Registers,
     mem: Mem,
     is_halted: bool,
     is_interrupted: bool,
@@ -208,13 +212,24 @@ impl CPU {
             instruction_byte = self.next();
         }
 
+        if instruction_byte != 0x00 {
+            debug!("Instruction: {:#04x}", instruction_byte);
+        }
+
         // What the fuck do I do with cycles
         let (next_pc, cycles) = if let Some(instruction) = Instruction::from_byte(instruction_byte)
         {
             self.exec(instruction)
         } else {
             // pls no
-            panic!("UNKOWN INSTRUCTION FOUND FOR: 0X{:x}", instruction_byte);
+            info!("\n\n Dumping processor data because of imminent panic.");
+            info!("Program counter: {}", self.pc);
+            info!("Stack pointer: {}", self.sp);
+            info!("Registers: {}", self.registers);
+            info!("Halted: {}", self.is_halted);
+            info!("Interrupted: {}", self.is_interrupted);
+            info!("END DUMP \n\n");
+            panic!("UNKOWN INSTRUCTION FOUND FOR: {:#04x}", instruction_byte);
         };
 
         self.pc = next_pc;
@@ -405,6 +420,31 @@ impl CPU {
                     let value = self.read_load_target_register(&target);
                     self.mem.write(address, value);
                     (self.pc.wrapping_add(3), 16)
+                }
+
+                LoadVariant::ImmWordToReg => {
+                    let address = self.next_nn();
+
+                    let lower = (self.sp & 0xFF) as u8;
+                    self.mem.write(address, lower);
+
+                    let higher = (self.sp >> 8) as u8;
+                    self.mem.write(address.wrapping_add(1), higher);
+
+                    (self.pc.wrapping_add(3), 20)
+                }
+
+                LoadVariant::StackPointerToMem(target) => {
+                    let value = self.next_nn();
+
+                    match target {
+                        LoadTarget::HL => self.registers.set_hl(value),
+                        LoadTarget::DE => self.registers.set_de(value),
+                        LoadTarget::BC => self.registers.set_bc(value),
+                        LoadTarget::SP => self.sp = value,
+                        _ => unimplemented!(),
+                    }
+                    (self.pc.wrapping_add(3), 12)
                 }
 
                 _ => unimplemented!(),

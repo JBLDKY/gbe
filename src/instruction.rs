@@ -194,6 +194,7 @@ pub enum LoadTarget {
     BC,
     DE,
     HL,
+    SP,
 }
 
 #[derive(Copy, Clone)]
@@ -218,6 +219,9 @@ pub enum LoadVariant {
     RegToMemOffset(LoadTarget),
     MemToRegA16(LoadTarget),
     RegAToMemA16(LoadTarget),
+
+    ImmWordToReg,                  // 0x[0-3]1
+    StackPointerToMem(LoadTarget), // 0x08
 }
 
 #[allow(dead_code)]
@@ -797,6 +801,13 @@ impl Instruction {
 
             0xFA => Some(Instruction::LD(LoadVariant::MemToRegA16(LoadTarget::A))),
             0xEA => Some(Instruction::LD(LoadVariant::RegAToMemA16(LoadTarget::A))),
+
+            0x01 => Some(Instruction::LD(LoadVariant::ImmWordToReg(LoadTarget::BC))),
+            0x11 => Some(Instruction::LD(LoadVariant::ImmWordToReg(LoadTarget::DE))),
+            0x21 => Some(Instruction::LD(LoadVariant::ImmWordToReg(LoadTarget::HL))),
+            0x31 => Some(Instruction::LD(LoadVariant::ImmWordToReg(LoadTarget::SP))),
+
+            0x08 => Some(Instruction::LD(LoadVariant::StackPointerToMem)),
 
             _ => None,
         }
