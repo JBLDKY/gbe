@@ -567,7 +567,7 @@ impl CPU {
         let _pc = if offset >= 0 {
             new_position.wrapping_add(offset as u16)
         } else {
-            new_position.wrapping_sub(offset.abs() as u16)
+            new_position.wrapping_sub(offset.unsigned_abs() as u16)
         };
 
         (self.pc + 2, 12)
@@ -601,7 +601,7 @@ impl CPU {
         // TODO test
         let value = self.read_8bit_register(&Arithmetic8BitTarget::A);
 
-        if value & 0xF > 0b1001 || self.registers.f.half_carry == true {
+        if value & 0xF > 0b1001 || self.registers.f.half_carry {
             self.modify_8bit_register(Arithmetic8BitTarget::A, |value| value + 0b0110);
         }
 
@@ -624,18 +624,17 @@ impl CPU {
         self.registers.f.half_carry = ((sp & 0xF) + (value & 0xF)) > 0x10;
         self.registers.f.carry = ((sp & 0xFF) + (value & 0xFF)) > 0x100;
 
-        self.sp = new_value as u16;
+        self.sp = new_value;
 
         (self.pc + 2, 16)
     }
 
     #[inline(always)]
     fn next_nn(&mut self) -> u16 {
-        let n1 = self.mem.read(self.pc + 1);
+        let n1 = self.mem.read(self.pc + 1) as u16;
+        let n2 = self.mem.read(self.pc + 2) as u16;
 
-        let n2 = self.mem.read(self.pc + 2);
-
-        (n2 << 8) as u16 | n1 as u16
+        (n2 << 8) | n1
     }
 
     #[inline(always)]
@@ -928,7 +927,7 @@ impl CPU {
 
         let left_bit = 0b1000_0000 & value;
         let mut new_value = value.rotate_left(1);
-        if self.registers.f.carry == true {
+        if self.registers.f.carry {
             new_value |= 0b0000_0001
         }
 
@@ -961,7 +960,7 @@ impl CPU {
 
         let right_bit = 0b1 & value; // Save the last bit by using `and` with 0000_0001
         let mut new_value = value.rotate_right(1); // rotate everything right
-        if self.registers.f.carry == true {
+        if self.registers.f.carry {
             new_value |= 0b1000_0000 // add the carry flag to the 7th bit
         }
 
@@ -1133,7 +1132,7 @@ impl CPU {
         let value = self.read_8bit_register(&Arithmetic8BitTarget::A);
         let right_bit = 0b1 & value; // Save the last bit by using `and` with 0000_0001
         let mut new_value = value.rotate_right(1); // rotate everything right
-        if self.registers.f.carry == true {
+        if self.registers.f.carry {
             // new_value = new_value + 128;
             new_value |= 0b1000_0000 // add the carry flag to the 7th bit
         }
@@ -1153,7 +1152,7 @@ impl CPU {
         let value = self.read_8bit_register(&Arithmetic8BitTarget::A);
         let left_bit = 0b1000_0000 & value;
         let mut new_value = value.rotate_left(1);
-        if self.registers.f.carry == true {
+        if self.registers.f.carry {
             new_value |= 0b0000_0001
         }
 

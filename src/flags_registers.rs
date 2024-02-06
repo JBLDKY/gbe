@@ -19,6 +19,12 @@ pub struct FlagsRegister {
     pub carry: bool,
 }
 
+impl Default for FlagsRegister {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FlagsRegister {
     pub fn new() -> FlagsRegister {
         FlagsRegister {

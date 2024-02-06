@@ -59,7 +59,7 @@ pub enum PrefixTarget {
 }
 
 impl RSTLocation {
-    pub fn to_hex(&self) -> u16 {
+    pub fn to_hex(self) -> u16 {
         match self {
             RSTLocation::X00 => 0x00,
             RSTLocation::X08 => 0x08,

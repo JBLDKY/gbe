@@ -74,7 +74,7 @@ impl Registers {
     // AF
     pub fn set_af(&mut self, value: u16) {
         self.a = ((value & 0xFF00) >> 8) as u8;
-        self.f = ((value & 0x00) as u8).into();
+        self.f = FlagsRegister::from((value & 0xFF) as u8);
     }
 
     pub fn get_af(&self) -> u16 {
@@ -84,7 +84,7 @@ impl Registers {
     // BC
     pub fn set_bc(&mut self, value: u16) {
         self.b = ((value & 0xFF00) >> 8) as u8;
-        self.c = (value & 0x00) as u8;
+        self.c = (value & 0xFF) as u8;
     }
 
     pub fn get_bc(&self) -> u16 {
@@ -94,7 +94,7 @@ impl Registers {
     // DE
     pub fn set_de(&mut self, value: u16) {
         self.d = ((value & 0xFF00) >> 8) as u8;
-        self.e = (value & 0x00) as u8;
+        self.e = (value & 0xFF) as u8;
     }
 
     pub fn get_de(&self) -> u16 {
@@ -104,7 +104,7 @@ impl Registers {
     // HL
     pub fn set_hl(&mut self, value: u16) {
         self.h = ((value & 0xFF00) >> 8) as u8;
-        self.l = (value & 0x00) as u8;
+        self.l = (value & 0xFF) as u8;
     }
 
     pub fn get_hl(&self) -> u16 {
