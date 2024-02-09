@@ -214,7 +214,7 @@ pub enum LoadVariant {
     MemIndirectToRegDecHL(LoadTarget, LoadTarget), // Memory indirect (HL decremented) to Register
     RegToMemIndirect(LoadTarget, LoadTarget),
     RegToMemIndirectInc(LoadTarget, LoadTarget),
-    RegToMemIndirectDec(LoadTarget, LoadTarget),
+    RegToMemIndirectDec,
     MemOffsetToReg(LoadTarget),
     RegToMemOffset(LoadTarget),
     MemToRegA16(LoadTarget),
@@ -782,10 +782,7 @@ impl Instruction {
                 LoadTarget::HL,
                 LoadTarget::A,
             ))),
-            0x32 => Some(Instruction::LD(LoadVariant::RegToMemIndirectDec(
-                LoadTarget::HL,
-                LoadTarget::A,
-            ))),
+            0x32 => Some(Instruction::LD(LoadVariant::RegToMemIndirectDec)),
 
             0xF0 => Some(Instruction::LD(LoadVariant::MemOffsetToReg(LoadTarget::A))),
             0xE0 => Some(Instruction::LD(LoadVariant::RegToMemOffset(LoadTarget::A))),
@@ -813,7 +810,7 @@ impl Instruction {
         }
     }
 
-    fn from_byte_prefixed(byte: u8) -> Option<Instruction> {
+    pub fn from_byte_prefixed(byte: u8) -> Option<Instruction> {
         match byte {
             0x00 => Some(Instruction::RLC(PrefixTarget::B)),
             0x01 => Some(Instruction::RLC(PrefixTarget::C)),

@@ -97,24 +97,28 @@ struct Mem {
 }
 
 impl Mem {
-    fn new(rom: &[u8]) -> Mem {
-        let mut rom_array = [0u8; ROM];
-        let mut switch_rom_array = [0u8; SWITCH_ROM];
+    fn new(boot_rom: &[u8], rom: &[u8]) -> Mem {
+        let mut boot_array = [0u8; ROM];
+        let boot_length = boot_rom.len().min(ROM);
+        boot_array[..boot_length].copy_from_slice(&boot_rom[..boot_length]);
 
-        // Copy first 16KB to rom_array
-        let rom_length = rom.len().min(ROM);
-        rom_array[..rom_length].copy_from_slice(&rom[..rom_length]);
-
-        // Copy the rest to switch_rom_array, if any
-        if rom.len() > ROM {
-            let switch_rom_length = rom.len() - ROM;
-            let switch_rom_end = switch_rom_length.min(SWITCH_ROM);
-            switch_rom_array[..switch_rom_end].copy_from_slice(&rom[ROM..ROM + switch_rom_end]);
-        }
+        // let mut rom_array = [0u8; ROM];
+        // let mut switch_rom_array = [0u8; SWITCH_ROM];
+        //
+        // // Copy first 16KB to rom_array
+        // let rom_length = rom.len().min(ROM);
+        // rom_array[..rom_length].copy_from_slice(&rom[..rom_length]);
+        //
+        // // Copy the rest to switch_rom_array, if any
+        // if rom.len() > ROM {
+        //     let switch_rom_length = rom.len() - ROM;
+        //     let switch_rom_end = switch_rom_length.min(SWITCH_ROM);
+        //     switch_rom_array[..switch_rom_end].copy_from_slice(&rom[ROM..ROM + switch_rom_end]);
+        // }
 
         Mem {
             address: [0; 0xFFFF],
-            rom: rom_array,
+            rom: boot_array,
             switch_rom: [0; SWITCH_ROM],
             vram: [0; VIDEO_RAM],
             switch_ram: [0; SWITCH_RAM],
@@ -192,10 +196,10 @@ pub struct CPU {
 
 #[allow(dead_code)]
 impl CPU {
-    pub fn new(rom: &[u8]) -> CPU {
+    pub fn new(boot_rom: &[u8], rom: &[u8]) -> CPU {
         CPU {
             registers: Registers::new(),
-            mem: Mem::new(rom),
+            mem: Mem::new(boot_rom, rom),
             is_halted: false,
             is_interrupted: false,
             sp: 0x00,
@@ -206,10 +210,15 @@ impl CPU {
     pub fn step(&mut self) -> u8 {
         // Next instruction
         let mut instruction_byte = self.mem.read(self.pc);
+        let instruction;
 
         // Prefixed instructions
         if instruction_byte == 0xcb {
-            instruction_byte = self.next();
+            debug!("PREFIXED~~");
+            instruction_byte = self.mem.read(self.pc);
+            instruction = Instruction::from_byte_prefixed(instruction_byte);
+        } else {
+            instruction = Instruction::from_byte(instruction_byte);
         }
 
         if instruction_byte != 0x00 {
@@ -217,8 +226,7 @@ impl CPU {
         }
 
         // What the fuck do I do with cycles
-        let (next_pc, cycles) = if let Some(instruction) = Instruction::from_byte(instruction_byte)
-        {
+        let (next_pc, cycles) = if let Some(instruction) = instruction {
             self.exec(instruction)
         } else {
             // pls no
@@ -301,7 +309,7 @@ impl CPU {
                     StackTarget::HL => self.registers.set_hl(popped),
                 }
 
-                (self.pc + 1, 12)
+                (self.pc.wrapping_add(1), 12)
             }
             CALL(condition) => self.call(condition), // jump relative from PC
             RET(condition) => self.r#return(condition), // Pop the top of the stack basically
@@ -380,10 +388,12 @@ impl CPU {
                     (self.pc.wrapping_add(1), 8)
                 }
 
-                LoadVariant::RegToMemIndirectDec(_, source) => {
-                    let value = self.read_load_target_register(&source);
+                LoadVariant::RegToMemIndirectDec => {
+                    let value = self.read_load_target_register(&LoadTarget::A);
                     let address = self.registers.get_hl();
+                    debug!("Before sub: {}", self.registers.get_hl());
                     self.registers.set_hl(address.wrapping_sub(1));
+                    debug!("After sub {}", self.registers.get_hl());
                     self.mem.write(address, value);
                     (self.pc.wrapping_add(1), 8)
                 }
@@ -544,7 +554,7 @@ impl CPU {
         self.sp = self.sp.wrapping_sub(1);
         self.mem.write(self.sp, (value & 0xFF) as u8);
 
-        (self.pc + 1, 16)
+        (self.pc.wrapping_add(1), 16)
     }
 
     #[inline(always)]
@@ -553,18 +563,16 @@ impl CPU {
 
         match condition {
             JumpCondition::Unconditional => {}
-            JumpCondition::Zero if !self.registers.f.zero => return (self.pc, 12),
-            JumpCondition::Carry if !self.registers.f.carry => return (self.pc, 12),
-            JumpCondition::NotZero if self.registers.f.zero => return (self.pc, 12),
-            JumpCondition::NotCarry if self.registers.f.carry => return (self.pc, 12),
+            JumpCondition::Zero if !self.registers.f.zero => return (next_position, 12),
+            JumpCondition::Carry if !self.registers.f.carry => return (next_position, 12),
+            JumpCondition::NotZero if self.registers.f.zero => return (next_position, 12),
+            JumpCondition::NotCarry if self.registers.f.carry => return (next_position, 12),
             _ => {}
         }
 
         self.push(next_position);
         // maybe return instead
-        self.pc = self.next_nn();
-
-        (self.pc, 24)
+        (next_position, 24)
     }
 
     #[inline(always)]
@@ -583,7 +591,7 @@ impl CPU {
         // Just return this
         self.registers.get_hl();
 
-        (self.pc + 1, 4)
+        (self.pc.wrapping_add(1), 4)
     }
 
     /// Jump to the address that is N removed from pc.
@@ -595,10 +603,16 @@ impl CPU {
 
         match condition {
             JumpCondition::Unconditional => {}
-            JumpCondition::Zero if !self.registers.f.zero => return (self.pc + 2, 12),
-            JumpCondition::Carry if !self.registers.f.carry => return (self.pc + 2, 12),
-            JumpCondition::NotZero if self.registers.f.zero => return (self.pc + 2, 12),
-            JumpCondition::NotCarry if self.registers.f.carry => return (self.pc + 2, 12),
+            JumpCondition::Zero if !self.registers.f.zero => return (self.pc.wrapping_add(2), 12),
+            JumpCondition::Carry if !self.registers.f.carry => {
+                return (self.pc.wrapping_add(2), 12)
+            }
+            JumpCondition::NotZero if self.registers.f.zero => {
+                return (self.pc.wrapping_add(2), 12)
+            }
+            JumpCondition::NotCarry if self.registers.f.carry => {
+                return (self.pc.wrapping_add(2), 12)
+            }
             _ => {}
         }
 
@@ -610,7 +624,7 @@ impl CPU {
             new_position.wrapping_sub(offset.unsigned_abs() as u16)
         };
 
-        (self.pc + 2, 12)
+        (self.pc.wrapping_add(2), 12)
     }
 
     /// Jump to the address that is stored in the next 16 bits in memory. See self.next_nn()
@@ -618,16 +632,22 @@ impl CPU {
         // need to return next bytes basically
         match condition {
             JumpCondition::Unconditional => {}
-            JumpCondition::Zero if !self.registers.f.zero => return (self.pc + 3, 16),
-            JumpCondition::Carry if !self.registers.f.carry => return (self.pc + 3, 16),
-            JumpCondition::NotZero if self.registers.f.zero => return (self.pc + 3, 16),
-            JumpCondition::NotCarry if self.registers.f.carry => return (self.pc + 3, 16),
+            JumpCondition::Zero if !self.registers.f.zero => return (self.pc.wrapping_add(3), 16),
+            JumpCondition::Carry if !self.registers.f.carry => {
+                return (self.pc.wrapping_add(3), 16)
+            }
+            JumpCondition::NotZero if self.registers.f.zero => {
+                return (self.pc.wrapping_add(3), 16)
+            }
+            JumpCondition::NotCarry if self.registers.f.carry => {
+                return (self.pc.wrapping_add(3), 16)
+            }
             _ => {}
         }
 
         self.next_nn();
 
-        (self.pc + 3, 16)
+        (self.pc.wrapping_add(3), 16)
     }
 
     /// Source: http://z80-heaven.wikidot.com/instructions-set:daa
@@ -649,7 +669,7 @@ impl CPU {
             self.modify_8bit_register(Arithmetic8BitTarget::A, |value| value + 0b0110_0000);
         }
 
-        (self.pc + 1, 4)
+        (self.pc.wrapping_add(1), 4)
     }
 
     fn add_sp_n(&mut self) -> (u16, u8) {
@@ -666,20 +686,20 @@ impl CPU {
 
         self.sp = new_value;
 
-        (self.pc + 2, 16)
+        (self.pc.wrapping_add(2), 16)
     }
 
     #[inline(always)]
     fn next_nn(&mut self) -> u16 {
-        let n1 = self.mem.read(self.pc + 1) as u16;
-        let n2 = self.mem.read(self.pc + 2) as u16;
+        let n1 = self.mem.read(self.pc.wrapping_add(1)) as u16;
+        let n2 = self.mem.read(self.pc.wrapping_add(2)) as u16;
 
         (n2 << 8) | n1
     }
 
     #[inline(always)]
     fn next(&self) -> u8 {
-        self.mem.read(self.pc + 1)
+        self.mem.read(self.pc.wrapping_add(1))
     }
 
     #[inline(always)]
@@ -771,7 +791,7 @@ impl CPU {
 
         self.registers.a = new_value;
 
-        (self.pc + 1, 8)
+        (self.pc.wrapping_add(1), 8)
     }
 
     #[inline(always)]
@@ -1684,7 +1704,7 @@ impl CPU {
             ((self.registers.get_hl() & 0xfff) + (value & 0xfff)) & 0x100 == 0x100;
 
         self.registers.set_hl(new_value);
-        (self.pc + 1, 8)
+        (self.pc.wrapping_add(1), 8)
     }
 
     #[inline(always)]

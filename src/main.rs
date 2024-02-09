@@ -19,12 +19,13 @@ fn main() {
     builder.init();
     info!("starting up");
 
-    let rom =
-        buffer_from_file("/home/jord/projects/gbe/roms/tetris_blast.gb").expect("invalid rom");
-    // let rom = buffer_from_file("/home/jord/projects/gbe/roms/yu_gi_oh_dungeon_dice_monsters.gba")
-    //     .expect("invalid rom");
+    let boot_rom =
+        buffer_from_file("/home/jord/projects/gbe/roms/dmg_boot.bin").expect("boot_rom rom");
 
-    let mut cpu = CPU::new(&rom);
+    let rom = buffer_from_file("/home/jord/projects/gbe/roms/yu_gi_oh_dungeon_dice_monsters.gba")
+        .expect("invalid rom");
+
+    let mut cpu = CPU::new(&boot_rom, &rom);
     let mut cycles = 0;
 
     loop {
