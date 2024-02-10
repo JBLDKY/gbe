@@ -97,29 +97,40 @@ struct Mem {
 }
 
 impl Mem {
-    fn new(boot_rom: &[u8], rom: &[u8]) -> Mem {
+    fn new(boot_rom: &[u8], game_rom: &[u8]) -> Mem {
+        // BOOT ARRAY
         let mut boot_array = [0u8; ROM];
-        let boot_length = boot_rom.len().min(ROM);
-        boot_array[..boot_length].copy_from_slice(&boot_rom[..boot_length]);
+        let boot_length = boot_rom.len();
 
-        // let mut rom_array = [0u8; ROM];
-        // let mut switch_rom_array = [0u8; SWITCH_ROM];
-        //
-        // // Copy first 16KB to rom_array
-        // let rom_length = rom.len().min(ROM);
-        // rom_array[..rom_length].copy_from_slice(&rom[..rom_length]);
-        //
-        // // Copy the rest to switch_rom_array, if any
-        // if rom.len() > ROM {
-        //     let switch_rom_length = rom.len() - ROM;
-        //     let switch_rom_end = switch_rom_length.min(SWITCH_ROM);
-        //     switch_rom_array[..switch_rom_end].copy_from_slice(&rom[ROM..ROM + switch_rom_end]);
-        // }
+        // Load the boot rom into the boot array, no need
+        // to slice our source because we know its only around 256 bits
+        boot_array[..boot_length].copy_from_slice(boot_rom);
+
+        // Moving onto the gamerom, we want to know how much of the game will fit
+        // in in the rom memory. This would be the min of our game_rom and the ROM Bank size
+        // after accounting for the space the boot rom takes up.
+        let game_length = game_rom.len();
+        let space = game_length.min(ROM - boot_length);
+
+        // Starting at the boot_rom end index we copy over as much of the game_rom
+        // as we can fit in the space partially occupied by the boot_rom.
+        boot_array[boot_length..].copy_from_slice(&game_rom[..space]);
+
+        // Initializ the switch rom array
+        let mut switch_rom_array = [0u8; SWITCH_ROM];
+
+        // Copy the rest to switch_rom_array
+        if (game_length - boot_length) > ROM {
+            let switch_rom_length = game_length - (ROM + boot_length);
+            let switch_rom_end = switch_rom_length.min(SWITCH_ROM);
+            switch_rom_array[..switch_rom_end]
+                .copy_from_slice(&game_rom[(ROM - boot_length)..ROM + switch_rom_end]);
+        }
 
         Mem {
             address: [0; 0xFFFF],
             rom: boot_array,
-            switch_rom: [0; SWITCH_ROM],
+            switch_rom: switch_rom_array,
             vram: [0; VIDEO_RAM],
             switch_ram: [0; SWITCH_RAM],
             internal_ram: [0; INTERNAL_RAM],
@@ -214,7 +225,6 @@ impl CPU {
 
         // Prefixed instructions
         if instruction_byte == 0xcb {
-            debug!("PREFIXED~~");
             instruction_byte = self.mem.read(self.pc);
             instruction = Instruction::from_byte_prefixed(instruction_byte);
         } else {
@@ -222,7 +232,7 @@ impl CPU {
         }
 
         if instruction_byte != 0x00 {
-            debug!("Instruction: {:#04x}", instruction_byte);
+            debug!("Address:{:#16x} - {:#04x}", self.pc, instruction_byte);
         }
 
         // What the fuck do I do with cycles
@@ -391,9 +401,7 @@ impl CPU {
                 LoadVariant::RegToMemIndirectDec => {
                     let value = self.read_load_target_register(&LoadTarget::A);
                     let address = self.registers.get_hl();
-                    debug!("Before sub: {}", self.registers.get_hl());
                     self.registers.set_hl(address.wrapping_sub(1));
-                    debug!("After sub {}", self.registers.get_hl());
                     self.mem.write(address, value);
                     (self.pc.wrapping_add(1), 8)
                 }

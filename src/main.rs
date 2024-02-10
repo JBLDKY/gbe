@@ -7,17 +7,30 @@ use env_logger::{Builder, Env};
 use log::LevelFilter;
 use log::{debug, error, info, warn};
 use std::fs::File;
-use std::io::{self, Read};
+use std::io::{self, Read, Write};
 use std::thread::sleep;
 use std::time::Duration;
 
 fn main() {
-    let env = Env::new().filter("MY_LOG").write_style("MY_LOG_STYLE");
-    let mut builder = Builder::new();
-    builder.filter_level(LevelFilter::Debug);
-    builder.parse_env(env);
-    builder.init();
     info!("starting up");
+    let env = Env::new().filter("MY_LOG").write_style("MY_LOG_STYLE");
+    let target = Box::new(File::create("./log.txt").expect("Can't create file"));
+
+    Builder::new()
+        .format(|buf, record| {
+            writeln!(
+                buf,
+                "{}:{} [{}] - {}",
+                record.file().unwrap_or("unknown"),
+                record.line().unwrap_or(0),
+                record.level(),
+                record.args()
+            )
+        })
+        .parse_env(env)
+        .target(env_logger::Target::Pipe(target))
+        .filter_level(LevelFilter::Debug)
+        .init();
 
     let boot_rom =
         buffer_from_file("/home/jord/projects/gbe/roms/dmg_boot.bin").expect("boot_rom rom");
