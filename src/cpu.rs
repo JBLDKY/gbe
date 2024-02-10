@@ -23,7 +23,7 @@ use crate::registers::Registers;
 /// Interrupt register  - 0xFFFF
 /// High RAM            - 0xFF80    - 0xFFFE
 /// Restricted          - 0xFF4C    - 0xFF7F
-/// I/O                 - 0xFF00    - 0xFF4B
+/// I/O                 - 0xFF00    - 0xFF7F
 /// Restricted          - 0xFEA0    - 0xFEFF
 /// Sprite Attributes   - 0xFE00    - 0xFE9F
 /// Restricted          - 0xE000    - 0xFDFF
@@ -39,13 +39,13 @@ const HIGH_RAM_START: usize = 0xFF80;
 const HIGH_RAM_END: usize = 0xFFFE;
 const HIGH_RAM: usize = HIGH_RAM_END - HIGH_RAM_START + 1;
 
-const RESTRICTED_HIGH_START: usize = 0xFF80;
-const RESTRICTED_HIGH_END: usize = 0xFFFE;
-const RESTRICTED_HIGH: usize = RESTRICTED_HIGH_END - RESTRICTED_HIGH_START + 1;
+// const RESTRICTED_HIGH_START: usize = 0xFF80;
+// const RESTRICTED_HIGH_END: usize = 0xFFFE;
+// const RESTRICTED_HIGH: usize = RESTRICTED_HIGH_END - RESTRICTED_HIGH_START + 1;
 
 const INPUT_OUTPUT: usize = INPUT_OUTPUT_END - INPUT_OUTPUT_START + 1;
 const INPUT_OUTPUT_START: usize = 0xFF00;
-const INPUT_OUTPUT_END: usize = 0xFF4B;
+const INPUT_OUTPUT_END: usize = 0xFF7F;
 
 const RESTRICTED_MID_START: usize = 0xFEA0;
 const RESTRICTED_MID_END: usize = 0xFEFF;
@@ -80,8 +80,7 @@ const ROM_START: usize = 0x0000;
 const ROM_END: usize = 0x3FFF;
 
 #[derive(Debug)]
-struct Mem {
-    address: [u8; 0xFFFF],
+pub struct Mem {
     rom: [u8; ROM],
     switch_rom: [u8; SWITCH_ROM],
     vram: [u8; VIDEO_RAM],
@@ -91,7 +90,7 @@ struct Mem {
     sprite: [u8; SPRITE],
     restricted_mid: [u8; RESTRICTED_MID],
     input_output: [u8; INPUT_OUTPUT],
-    restricted_high: [u8; RESTRICTED_HIGH],
+    // restricted_high: [u8; RESTRICTED_HIGH],
     high_ram: [u8; HIGH_RAM],
     interrupt: usize,
 }
@@ -100,11 +99,11 @@ impl Mem {
     fn new(boot_rom: &[u8], game_rom: &[u8]) -> Mem {
         // BOOT ARRAY
         let mut boot_array = [0u8; ROM];
-        let boot_length = boot_rom.len();
+        let boot_length = boot_rom.len().min(ROM);
 
         // Load the boot rom into the boot array, no need
         // to slice our source because we know its only around 256 bits
-        boot_array[..boot_length].copy_from_slice(boot_rom);
+        boot_array[..boot_length].copy_from_slice(&boot_rom[..boot_length]);
 
         // Moving onto the gamerom, we want to know how much of the game will fit
         // in in the rom memory. This would be the min of our game_rom and the ROM Bank size
@@ -120,15 +119,14 @@ impl Mem {
         let mut switch_rom_array = [0u8; SWITCH_ROM];
 
         // Copy the rest to switch_rom_array
-        if (game_length - boot_length) > ROM {
-            let switch_rom_length = game_length - (ROM + boot_length);
-            let switch_rom_end = switch_rom_length.min(SWITCH_ROM);
-            switch_rom_array[..switch_rom_end]
-                .copy_from_slice(&game_rom[(ROM - boot_length)..ROM + switch_rom_end]);
+        let remaining_game_length = game_length - boot_length;
+
+        if remaining_game_length > ROM {
+            switch_rom_array
+                .copy_from_slice(&game_rom[ROM - boot_length..((ROM - boot_length) + SWITCH_ROM)]);
         }
 
         Mem {
-            address: [0; 0xFFFF],
             rom: boot_array,
             switch_rom: switch_rom_array,
             vram: [0; VIDEO_RAM],
@@ -138,13 +136,13 @@ impl Mem {
             sprite: [0; SPRITE],
             restricted_mid: [0; RESTRICTED_MID],
             input_output: [0; INPUT_OUTPUT],
-            restricted_high: [0; RESTRICTED_HIGH],
+            // restricted_high: [0; RESTRICTED_HIGH],
             high_ram: [0; HIGH_RAM],
             interrupt: 0,
         }
     }
 
-    fn read(&self, addr: u16) -> u8 {
+    pub fn read(&self, addr: u16) -> u8 {
         match addr {
             0x0000..=0x3FFF => self.rom[addr as usize],
             0x4000..=0x7FFF => {
@@ -157,8 +155,8 @@ impl Mem {
             0xE000..=0xFDFF => self.internal_ram[addr as usize - 0xE000],
             0xFE00..=0xFE9F => self.sprite[addr as usize - 0xFE00],
             0xFEA0..=0xFEFF => 0, // restricted
-            0xFF00..=0xFF4B => self.input_output[addr as usize - 0xFF00],
-            0xFF4C..=0xFF7F => 0, // restricted
+            0xFF00..=0xFF7F => self.input_output[addr as usize - 0xFF00],
+            // 0xFF4C..=0xFF7F => 0, // restricted
             0xFF80..=0xFFFE => self.high_ram[addr as usize - 0xFF80],
             0xFFFF => self.interrupt as u8,
         }
@@ -174,6 +172,16 @@ impl Mem {
     }
 
     fn write(&mut self, addr: u16, value: u8) {
+        // debug!("Writing {:#04x} with {:#04x}", addr, value);
+        //
+
+        match addr {
+            0xFF50 => {
+                panic!("unload");
+            }
+            _ => {}
+        };
+
         match addr {
             0x0000..=0x3FFF => self.rom[addr as usize] = value,
             0x4000..=0x7FFF => {
@@ -186,8 +194,7 @@ impl Mem {
             0xE000..=0xFDFF => self.internal_ram[addr as usize - 0xE000] = value,
             0xFE00..=0xFE9F => self.sprite[addr as usize - 0xFE00] = value,
             0xFEA0..=0xFEFF => {} // restricted
-            0xFF00..=0xFF4B => self.input_output[addr as usize - 0xFF00] = value,
-            0xFF4C..=0xFF7F => {} // restricted
+            0xFF00..=0xFF7F => self.input_output[addr as usize - 0xFF00] = value,
             0xFF80..=0xFFFE => self.high_ram[addr as usize - 0xFF80] = value,
             0xFFFF => self.interrupt = value.into(),
         }
@@ -198,11 +205,12 @@ impl Mem {
 #[derive(Debug)]
 pub struct CPU {
     pub registers: Registers,
-    mem: Mem,
-    is_halted: bool,
-    is_interrupted: bool,
-    sp: u16, // Stack Pointer
-    pc: u16, // Program Counter
+    pub mem: Mem,
+    pub is_halted: bool,
+    pub is_interrupted: bool,
+    pub interrupts_enabled: bool,
+    pub sp: u16, // Stack Pointer
+    pub pc: u16, // Program Counter
 }
 
 #[allow(dead_code)]
@@ -212,9 +220,10 @@ impl CPU {
             registers: Registers::new(),
             mem: Mem::new(boot_rom, rom),
             is_halted: false,
-            is_interrupted: false,
+            is_interrupted: true,
+            interrupts_enabled: false,
             sp: 0x00,
-            pc: 0x00,
+            pc: 0x0,
         }
     }
 
@@ -222,18 +231,40 @@ impl CPU {
         // Next instruction
         let mut instruction_byte = self.mem.read(self.pc);
         let instruction;
+        let mut extra_cycles = 0;
+        let mut extra_pc = 0;
+
+        debug!(
+            "A: {:02X} F: {:02X} B: {:02X} C: {:02X} D: {:02X} E: {:02X} H: {:02X} L: {:02X} SP: {:04X} PC: 00:{:04X} ({:02X} {:02X} {:02X} {:02X})",
+            self.registers.a,
+            u8::from(self.registers.f),  // Assuming `f` is the flag register
+            self.registers.b,
+            self.registers.c,
+            self.registers.d,
+            self.registers.e,
+            self.registers.h,
+            self.registers.l,
+            self.sp,
+            self.pc,
+            self.mem.read(self.pc),
+            self.mem.read(self.pc.wrapping_add(1)),
+            self.mem.read(self.pc.wrapping_add(2)),
+            self.mem.read(self.pc.wrapping_add(3)),
+        );
 
         // Prefixed instructions
         if instruction_byte == 0xcb {
-            instruction_byte = self.mem.read(self.pc);
+            // self.pc = self.pc.wrapping_add(1);
+            extra_cycles += 4;
+            instruction_byte = self.mem.read(self.pc.wrapping_add(1));
             instruction = Instruction::from_byte_prefixed(instruction_byte);
         } else {
             instruction = Instruction::from_byte(instruction_byte);
         }
 
-        if instruction_byte != 0x00 {
-            debug!("Address:{:#16x} - {:#04x}", self.pc, instruction_byte);
-        }
+        // if instruction_byte == 0x20 {
+        //     debug!("jump king");
+        // }
 
         // What the fuck do I do with cycles
         let (next_pc, cycles) = if let Some(instruction) = instruction {
@@ -241,18 +272,36 @@ impl CPU {
         } else {
             // pls no
             info!("\n\n Dumping processor data because of imminent panic.");
-            info!("Program counter: {}", self.pc);
-            info!("Stack pointer: {}", self.sp);
-            info!("Registers: {}", self.registers);
+            info!("Program counter: {:#04x}", self.pc);
+            info!("Stack pointer: {:#04x}", self.sp);
+            info!("Registers: {:#04x?}", self.registers);
             info!("Halted: {}", self.is_halted);
             info!("Interrupted: {}", self.is_interrupted);
             info!("END DUMP \n\n");
             panic!("UNKOWN INSTRUCTION FOUND FOR: {:#04x}", instruction_byte);
         };
 
+        if self.interrupts_enabled {
+            let interrupt_enable = self.mem.read(0xFFFF) as u8;
+            let interrupt_flag = self.mem.read(0xFF0F) as u8;
+            let interrupt_requested = interrupt_enable & interrupt_flag;
+
+            if interrupt_requested != 0 {
+                if interrupt_requested & 0x01 != 0 {
+                    // VBLANK
+                    self.push(self.pc);
+
+                    self.pc = 0x0040; // VBlank address, todo create a const
+
+                    let interrupt_flag = self.mem.read(0xFF0F);
+                    self.mem.write(0xFF0F, interrupt_flag & 0xFE);
+                }
+            }
+        }
+
         self.pc = next_pc;
 
-        cycles
+        cycles + extra_cycles
     }
 
     fn exec(&mut self, instruction: Instruction) -> (u16, u8) {
@@ -307,8 +356,8 @@ impl CPU {
                     StackTarget::DE => self.registers.get_de(),
                     StackTarget::HL => self.registers.get_hl(),
                 };
-
-                self.push(value)
+                self.push(value);
+                (self.pc.wrapping_add(1), 16)
             } // Push onto stack one of the 16 bit registers
             POP(target) => {
                 let popped = self.pop();
@@ -331,12 +380,12 @@ impl CPU {
                 (self.pc.wrapping_add(1), 4)
             }
             DI => {
-                self.is_interrupted = false;
+                self.interrupts_enabled = false;
                 (self.pc.wrapping_add(1), 4)
             }
 
             EI => {
-                self.is_interrupted = true;
+                self.interrupts_enabled = true;
                 (self.pc.wrapping_add(1), 4)
             }
             LD(variant) => match variant {
@@ -367,8 +416,9 @@ impl CPU {
                         LoadTarget::BC => self.registers.get_bc(),
                         LoadTarget::DE => self.registers.get_de(),
                         LoadTarget::C => {
-                            (pc, cycles) = (2, 8);
-                            0xFF00 | self.read_load_target_register(&destination) as u16
+                            pc = 1;
+                            cycles = 8;
+                            0xFF00 | (self.registers.c as u16)
                         }
                         _ => unimplemented!(),
                     };
@@ -511,6 +561,7 @@ impl CPU {
             ),
         }
     }
+
     #[inline(always)]
     fn load_register_into_register(&mut self, destination: LoadTarget, source: LoadTarget) {
         let value = self.read_load_target_register(&source);
@@ -553,7 +604,7 @@ impl CPU {
     }
 
     #[inline(always)]
-    fn push(&mut self, value: u16) -> (u16, u8) {
+    fn push(&mut self, value: u16) {
         // Higher byte is written first
         self.sp = self.sp.wrapping_sub(1);
         self.mem.write(self.sp, ((value & 0xFF00) >> 8) as u8);
@@ -561,8 +612,6 @@ impl CPU {
         // Followed by the lower byte
         self.sp = self.sp.wrapping_sub(1);
         self.mem.write(self.sp, (value & 0xFF) as u8);
-
-        (self.pc.wrapping_add(1), 16)
     }
 
     #[inline(always)]
@@ -580,18 +629,20 @@ impl CPU {
 
         self.push(next_position);
         // maybe return instead
-        (next_position, 24)
+        (self.next_nn(), 24)
     }
 
     #[inline(always)]
     fn pop(&mut self) -> u16 {
-        // Might need to swap lower and upper
-        let upper = self.mem.read(self.sp) as u16;
-        self.sp = self.sp.wrapping_add(1);
-
+        // Read the lower byte first (Game Boy is little-endian)
         let lower = self.mem.read(self.sp) as u16;
         self.sp = self.sp.wrapping_add(1);
 
+        // Then read the upper byte
+        let upper = self.mem.read(self.sp) as u16;
+        self.sp = self.sp.wrapping_add(1);
+
+        // Combine them into a 16-bit value with upper as the high byte and lower as the low byte
         (upper << 8) | lower
     }
 
@@ -626,13 +677,13 @@ impl CPU {
 
         let offset = self.next() as i8;
         // Probably needs returning someday
-        let _pc = if offset >= 0 {
+        let pc = if offset >= 0 {
             new_position.wrapping_add(offset as u16)
         } else {
             new_position.wrapping_sub(offset.unsigned_abs() as u16)
         };
 
-        (self.pc.wrapping_add(2), 12)
+        (pc, 12)
     }
 
     /// Jump to the address that is stored in the next 16 bits in memory. See self.next_nn()
@@ -1123,7 +1174,6 @@ impl CPU {
 
     #[inline(always)]
     fn bit(&mut self, target: PrefixTarget, idx: u8) -> (u16, u8) {
-        assert!(idx < 8);
         let pc;
         let cycles;
 
@@ -1141,6 +1191,8 @@ impl CPU {
 
         let mask = 1 << idx;
         let bit = value & mask;
+
+        assert_eq!(bit, value & mask);
 
         self.registers.f.zero = bit == 0;
         self.registers.f.subtract = false;

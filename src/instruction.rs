@@ -180,7 +180,7 @@ pub enum Instruction {
     LD(LoadVariant),
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 #[allow(dead_code)]
 pub enum LoadTarget {
     A,
