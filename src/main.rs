@@ -4,18 +4,18 @@ mod instruction;
 mod registers;
 use crate::cpu::CPU;
 use ::image::*;
-use ctrlc;
+
 use env_logger::{Builder, Env};
 use log::LevelFilter;
-use log::{debug, error, info, warn};
+use log::{info};
 use std::fs::File;
 use std::io::{self, Read, Write};
-use std::sync::atomic::{AtomicBool, Ordering};
+
 use std::thread::sleep;
 use std::time::Duration;
 
-use graphics::{clear, Image, Transformed};
-use opengl_graphics::{Filter, GlGraphics, OpenGL};
+use graphics::{clear};
+use opengl_graphics::{GlGraphics, OpenGL};
 use piston_window::*;
 
 use gfx_device_gl::Resources as GlResources;
@@ -40,10 +40,10 @@ fn run(mut cpu: CPU) {
             .build()
             .unwrap();
 
-    let mut gl = GlGraphics::new(opengl);
-    let vram = [0u8; 0x2000]; // Replace this with actual VRAM data
+    let _gl = GlGraphics::new(opengl);
+    let _vram = [0u8; 0x2000]; // Replace this with actual VRAM data
     let mut texture = vram_to_texture(&mut window, &cpu.mem.vram);
-    let mut canvas = ImageBuffer::new(SCREEN_WIDTH, SCREEN_HEIGHT);
+    let canvas = ImageBuffer::new(SCREEN_WIDTH, SCREEN_HEIGHT);
 
     let mut texture_context = TextureContext {
         factory: window.factory.clone(),
@@ -71,21 +71,21 @@ fn vram_to_texture(window: &mut PistonWindow, vram: &[u8]) -> Texture<GlResource
     let mut buffer: Vec<u8> = vec![0; (SCREEN_WIDTH * SCREEN_HEIGHT * 4) as usize];
 
     for tile_y in 0..(SCREEN_HEIGHT / TILE_SIZE) {
-        for tile_x in 0..(SCREEN_WIDTH / TILE_SIZE as u32) {
-            let tile_index = tile_y * (SCREEN_WIDTH / TILE_SIZE as u32) + tile_x;
+        for tile_x in 0..(SCREEN_WIDTH / TILE_SIZE) {
+            let tile_index = tile_y * (SCREEN_WIDTH / TILE_SIZE) + tile_x;
 
             // VRAM starts at 0 in your array, so subtract VIDEO_RAM_START
-            let tile_addr = tile_index * TILE_DATA_SIZE as u32;
+            let tile_addr = tile_index * TILE_DATA_SIZE;
 
             for row in 0..TILE_SIZE {
                 // Now, tile_addr correctly points to the start of each tile in VRAM
-                let byte1 = vram[(tile_addr as usize + (row * 2) as usize) as usize];
-                let byte2 = vram[(tile_addr as usize + (row * 2 + 1) as usize) as usize];
+                let byte1 = vram[(tile_addr as usize + (row * 2) as usize)];
+                let byte2 = vram[(tile_addr as usize + (row * 2 + 1) as usize)];
 
                 for col in 0..TILE_SIZE {
                     let color_bit = ((byte1 >> (7 - col)) & 1) | (((byte2 >> (7 - col)) & 1) << 1);
                     let color = map_color_bit_to_rgba(color_bit);
-                    let buffer_index = ((tile_y * TILE_SIZE as u32 + row as u32) * SCREEN_WIDTH
+                    let buffer_index = ((tile_y * TILE_SIZE + row) * SCREEN_WIDTH
                         + tile_x * TILE_SIZE
                         + col)
                         * 4;
@@ -101,7 +101,7 @@ fn vram_to_texture(window: &mut PistonWindow, vram: &[u8]) -> Texture<GlResource
         encoder: window.factory.create_command_buffer().into(),
     };
 
-    let mut texture_settings = TextureSettings::new();
+    let texture_settings = TextureSettings::new();
 
     Texture::from_memory_alpha(
         &mut texture_context,

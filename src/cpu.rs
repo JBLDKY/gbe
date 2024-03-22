@@ -230,7 +230,7 @@ impl CPU {
         let mut instruction_byte = self.mem.read(self.pc);
         let instruction;
         let mut extra_cycles = 0;
-        let mut extra_pc = 0;
+        let _extra_pc = 0;
 
         debug!(
             "A: {:02X} F: {:02X} B: {:02X} C: {:02X} D: {:02X} E: {:02X} H: {:02X} L: {:02X} SP: {:04X} PC: 00:{:04X} ({:02X} {:02X} {:02X} {:02X})",
@@ -300,20 +300,18 @@ impl CPU {
         };
 
         if self.interrupts_enabled {
-            let interrupt_enable = self.mem.read(0xFFFF) as u8;
-            let interrupt_flag = self.mem.read(0xFF0F) as u8;
+            let interrupt_enable = self.mem.read(0xFFFF);
+            let interrupt_flag = self.mem.read(0xFF0F);
             let interrupt_requested = interrupt_enable & interrupt_flag;
 
-            if interrupt_requested != 0 {
-                if interrupt_requested & 0x01 != 0 {
-                    // VBLANK
-                    self.push(self.pc);
+            if interrupt_requested != 0 && interrupt_requested & 0x01 != 0 {
+                // VBLANK
+                self.push(self.pc);
 
-                    self.pc = 0x0040; // VBlank address, todo create a const
+                self.pc = 0x0040; // VBlank address, todo create a const
 
-                    let interrupt_flag = self.mem.read(0xFF0F);
-                    self.mem.write(0xFF0F, interrupt_flag & 0xFE);
-                }
+                let interrupt_flag = self.mem.read(0xFF0F);
+                self.mem.write(0xFF0F, interrupt_flag & 0xFE);
             }
         }
 
