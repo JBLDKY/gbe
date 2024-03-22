@@ -83,7 +83,7 @@ const ROM_END: usize = 0x3FFF;
 pub struct Mem {
     rom: [u8; ROM],
     switch_rom: [u8; SWITCH_ROM],
-    vram: [u8; VIDEO_RAM],
+    pub vram: [u8; VIDEO_RAM],
     switch_ram: [u8; SWITCH_RAM],
     internal_ram: [u8; INTERNAL_RAM],
     restricted_low: [u8; RESTRICTED_LOW],
@@ -173,14 +173,12 @@ impl Mem {
 
     fn write(&mut self, addr: u16, value: u8) {
         // debug!("Writing {:#04x} with {:#04x}", addr, value);
-        //
 
-        match addr {
-            0xFF50 => {
-                panic!("unload");
-            }
-            _ => {}
-        };
+        if addr == 0xFF50 {
+            println!("{:#04x}", addr);
+            println!("{:#04x}", value);
+            panic!("unload");
+        }
 
         match addr {
             0x0000..=0x3FFF => self.rom[addr as usize] = value,
@@ -251,6 +249,26 @@ impl CPU {
             self.mem.read(self.pc.wrapping_add(2)),
             self.mem.read(self.pc.wrapping_add(3)),
         );
+
+        if format!(            "A: {:02X} F: {:02X} B: {:02X} C: {:02X} D: {:02X} E: {:02X} H: {:02X} L: {:02X} SP: {:04X} PC: 00:{:04X} ({:02X} {:02X} {:02X} {:02X})",
+            self.registers.a,
+            u8::from(self.registers.f),  // Assuming `f` is the flag register
+            self.registers.b,
+            self.registers.c,
+            self.registers.d,
+            self.registers.e,
+            self.registers.h,
+            self.registers.l,
+            self.sp,
+            self.pc,
+            self.mem.read(self.pc),
+            self.mem.read(self.pc.wrapping_add(1)),
+            self.mem.read(self.pc.wrapping_add(2)),
+            self.mem.read(self.pc.wrapping_add(3)),
+) == "A: FC F: 00 B: 00 C: 12 D: 01 E: 04 H: 80 L: 10 SP: FFFE PC: 00:0027 (1A CD 95 00)"{
+
+            println!("hii");
+        }
 
         // Prefixed instructions
         if instruction_byte == 0xcb {
