@@ -31,7 +31,8 @@ use crate::registers::Registers;
 /// Switchable RAM Bank - 0xA000    - 0xBFFF
 /// Video RAM           - 0x8000    - 0x9FFF
 /// Switchable ROM Bank - 0x4000    - 0x7FFF
-/// ROM                 - 0x0000    - 0x3FFF
+/// Game ROM            - 0x0100    - 0x03FF
+/// Boot ROM            - 0x0000    - 0x00FF
 
 const INTERRUPT_REGISTER: usize = 0xFFFF;
 
@@ -75,13 +76,17 @@ const SWITCH_ROM: usize = SWITCH_ROM_END - SWITCH_ROM_START + 1;
 const SWITCH_ROM_START: usize = 0x4000;
 const SWITCH_ROM_END: usize = 0x7FFF;
 
+const GAME_ROM: usize = ROM_END - ROM_START + 1;
+const GAME_ROM_START: usize = 0x0100;
+const GAME_ROM_END: usize = 0x100;
+
 const ROM: usize = ROM_END - ROM_START + 1;
 const ROM_START: usize = 0x0000;
-const ROM_END: usize = 0x3FFF;
+const ROM_END: usize = 0x00FF;
 
 #[derive(Debug)]
 pub struct Mem {
-    rom: [u8; ROM],
+    rom: Option<[u8; ROM]>,
     switch_rom: [u8; SWITCH_ROM],
     pub vram: [u8; VIDEO_RAM],
     switch_ram: [u8; SWITCH_RAM],
@@ -127,7 +132,7 @@ impl Mem {
         }
 
         Mem {
-            rom: boot_array,
+            rom: Some(boot_array),
             switch_rom: switch_rom_array,
             vram: [0; VIDEO_RAM],
             switch_ram: [0; SWITCH_RAM],
@@ -144,7 +149,14 @@ impl Mem {
 
     pub fn read(&self, addr: u16) -> u8 {
         match addr {
-            0x0000..=0x3FFF => self.rom[addr as usize],
+            0x0000..=0x00FF => {
+                if let Some(rom) = self.rom {
+                    rom[addr as usize]
+                } else {
+                    self.switch_rom[addr as usize]
+                }
+            }
+            0x0100..=0x3FFF => self.switch_rom[addr as usize],
             0x4000..=0x7FFF => {
                 let switchable_addr = addr as usize - 0x4000;
                 self.switch_rom[switchable_addr % self.switch_rom.len()]
@@ -172,16 +184,8 @@ impl Mem {
     }
 
     fn write(&mut self, addr: u16, value: u8) {
-        // debug!("Writing {:#04x} with {:#04x}", addr, value);
-
-        if addr == 0xFF50 {
-            println!("{:#04x}", addr);
-            println!("{:#04x}", value);
-            panic!("unload");
-        }
-
         match addr {
-            0x0000..=0x3FFF => self.rom[addr as usize] = value,
+            0x0000..=0x3FFF => self.switch_rom[addr as usize] = value,
             0x4000..=0x7FFF => {
                 let switchable_addr = addr as usize - 0x4000;
                 self.switch_rom[switchable_addr % self.switch_rom.len()] = value
@@ -250,27 +254,6 @@ impl CPU {
             self.mem.read(self.pc.wrapping_add(3)),
         );
 
-        if format!(            "A: {:02X} F: {:02X} B: {:02X} C: {:02X} D: {:02X} E: {:02X} H: {:02X} L: {:02X} SP: {:04X} PC: 00:{:04X} ({:02X} {:02X} {:02X} {:02X})",
-            self.registers.a,
-            u8::from(self.registers.f),  // Assuming `f` is the flag register
-            self.registers.b,
-            self.registers.c,
-            self.registers.d,
-            self.registers.e,
-            self.registers.h,
-            self.registers.l,
-            self.sp,
-            self.pc,
-            self.mem.read(self.pc),
-            self.mem.read(self.pc.wrapping_add(1)),
-            self.mem.read(self.pc.wrapping_add(2)),
-            self.mem.read(self.pc.wrapping_add(3)),
-) == "A: FC F: 00 B: 00 C: 12 D: 01 E: 04 H: 80 L: 10 SP: FFFE PC: 00:0027 (1A CD 95 00)"{
-
-            println!("hii");
-        }
-
-        // Prefixed instructions
         if instruction_byte == 0xcb {
             // self.pc = self.pc.wrapping_add(1);
             extra_cycles += 4;
@@ -279,10 +262,6 @@ impl CPU {
         } else {
             instruction = Instruction::from_byte(instruction_byte);
         }
-
-        // if instruction_byte == 0x20 {
-        //     debug!("jump king");
-        // }
 
         // What the fuck do I do with cycles
         let (next_pc, cycles) = if let Some(instruction) = instruction {
