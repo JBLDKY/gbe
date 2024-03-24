@@ -1,4 +1,5 @@
 /target
 /roms/*
-pypy.ipynb
+*.ipynb
 *.txt
+

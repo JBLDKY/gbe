@@ -1029,6 +1029,30 @@ impl CPU {
         }
     }
 
+    // #[inline(always)]
+    // fn rl(&mut self, target: PrefixTarget) -> (u16, u8) {
+    //     // Read value of PrefixTarget (register C)
+    //     let value = self.read_prefix_target_register(&target);
+    //
+    //     let left_bit = 0b1000_0000 & value; // save the last bit (if 1) to shift to register F
+    //     let mut new_value = value.rotate_left(1); // perform rotation
+    //     if self.registers.f.carry {
+    //         new_value |= 0b0000_0001
+    //     }
+    //
+    //     self.registers.f.zero = new_value == 0; // if the resulting value is 0, set the zero flag
+    //     self.registers.f.subtract = false; // Always unset subtract
+    //     self.registers.f.half_carry = false; // Always unset half_carry
+    //     self.registers.f.carry = left_bit != 0; // if leftmost bit is 1, set the carry flag
+    //
+    //     self.write_prefix_target_register(target, new_value); // update register C with the new
+    //                                                           // value
+    //
+    //     // return the new Program Counter value & the amount of cycles this takes on the original
+    //     // Z80 CPU (for accurate emulation we need to count original cycles
+    //     (self.pc.wrapping_add(2), 8) // wrapping add basically allows overflow to continue from 0
+    // }
+
     #[inline(always)]
     fn rl(&mut self, target: PrefixTarget) -> (u16, u8) {
         let value = match target {
@@ -1039,16 +1063,14 @@ impl CPU {
             _ => self.read_prefix_target_register(&target),
         };
 
-        let left_bit = 0b1000_0000 & value;
-        let mut new_value = value.rotate_left(1);
-        if self.registers.f.carry {
-            new_value |= 0b0000_0001
-        }
+        let left_most_bit = value & 0b1000_0000; // save the left most bit
+        let mut new_value = value << 1; // shift left by 1
+        new_value |= self.registers.f.carry as u8; // set the right most bit to value f_carry
 
         self.registers.f.zero = new_value == 0;
         self.registers.f.subtract = false;
         self.registers.f.half_carry = false;
-        self.registers.f.carry = left_bit != 0;
+        self.registers.f.carry = left_most_bit != 0; // set f_carry to the value of the left most bit
 
         match target {
             PrefixTarget::HLI => {
@@ -1265,16 +1287,15 @@ impl CPU {
     #[inline(always)]
     fn rla(&mut self) -> (u16, u8) {
         let value = self.read_8bit_register(&Arithmetic8BitTarget::A);
-        let left_bit = 0b1000_0000 & value;
-        let mut new_value = value.rotate_left(1);
-        if self.registers.f.carry {
-            new_value |= 0b0000_0001
-        }
+
+        let left_most_bit = value & 0b1000_0000; // save the left most bit
+        let mut new_value = value << 1; // shift left by 1
+        new_value |= self.registers.f.carry as u8; // set the right most bit to value f_carry
 
         self.registers.f.zero = false;
         self.registers.f.subtract = false;
         self.registers.f.half_carry = false;
-        self.registers.f.carry = left_bit != 0;
+        self.registers.f.carry = left_most_bit != 0;
 
         self.registers.a = new_value;
 
