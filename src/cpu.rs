@@ -213,6 +213,7 @@ pub struct CPU {
     pub interrupts_enabled: bool,
     pub sp: u16, // Stack Pointer
     pub pc: u16, // Program Counter
+    pub cycles: usize,
 }
 
 #[allow(dead_code)]
@@ -226,6 +227,7 @@ impl CPU {
             interrupts_enabled: false,
             sp: 0x00,
             pc: 0x0,
+            cycles: 0,
         }
     }
 
@@ -296,6 +298,11 @@ impl CPU {
 
         self.pc = next_pc;
 
+        self.cycles += cycles as usize;
+
+        if instruction_byte == 0xf0 {
+            panic!("{}", self.cycles);
+        }
         cycles + extra_cycles
     }
 
@@ -452,8 +459,6 @@ impl CPU {
                 }
 
                 LoadVariant::MemOffsetToReg(target) => {
-                    println!("{:#02x?}", self.mem.input_output);
-                    panic!("");
                     let offset = self.next();
                     let address = 0xFF00 + offset as u16;
                     let value = self.mem.read(address);

@@ -48,7 +48,7 @@ fn main() {
         cycles += cpu.step() as usize;
         if debug_value != cpu.mem.read(0xFF44) {
             println!("{:4x}", debug_value);
-            panic!("")
+            panic!("{}", cycles);
         };
 
         // Dont run as if on steroids
