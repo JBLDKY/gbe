@@ -27,6 +27,7 @@
 
 const BASE_CLOCK_SPEED: usize = 4_194_304;
 
+#[derive(Debug)]
 enum Frequency {
     ZERO,
     ONE,
@@ -45,6 +46,7 @@ impl Frequency {
     }
 }
 
+#[derive(Debug)]
 pub struct Timer {
     cycles: usize,
     counter: u8,

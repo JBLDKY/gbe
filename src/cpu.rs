@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 use log::{debug, info};
 
+use crate::gpu::GPU;
 use crate::instruction::AnyTarget;
 use crate::instruction::Arithmetic16BitTarget;
 use crate::instruction::Arithmetic8BitTarget;
@@ -17,6 +18,7 @@ use crate::instruction::LoadVariant;
 use crate::instruction::PrefixTarget;
 use crate::instruction::StackTarget;
 use crate::registers::Registers;
+use crate::timer::Timer;
 
 /// Memory banks
 ///
@@ -208,13 +210,14 @@ impl Mem {
 pub struct CPU {
     pub registers: Registers,
     pub mem: Mem,
+    pub gpu: GPU,
     pub timer: Timer,
+    pub div: Timer,
     pub is_halted: bool,
     pub is_interrupted: bool,
     pub interrupts_enabled: bool,
     pub sp: u16, // Stack Pointer
     pub pc: u16, // Program Counter
-    pub cycles: usize,
 }
 
 #[allow(dead_code)]
@@ -223,13 +226,14 @@ impl CPU {
         CPU {
             registers: Registers::new(),
             mem: Mem::new(boot_rom, rom),
-            timer: Timer,
+            gpu: GPU::new(),
+            timer: Timer::new(),
+            div: Timer::new(),
             is_halted: false,
             is_interrupted: true,
             interrupts_enabled: false,
             sp: 0x00,
             pc: 0x0,
-            cycles: 0,
         }
     }
 
@@ -282,6 +286,9 @@ impl CPU {
             panic!("UNKOWN INSTRUCTION FOUND FOR: {:#04x}", instruction_byte);
         };
 
+        let interrupt = self.timer.step(cycles);
+        self.div.step(cycles);
+
         if self.interrupts_enabled {
             let interrupt_enable = self.mem.read(0xFFFF);
             let interrupt_flag = self.mem.read(0xFF0F);
@@ -299,12 +306,6 @@ impl CPU {
         }
 
         self.pc = next_pc;
-
-        self.cycles += cycles as usize;
-
-        if instruction_byte == 0xf0 {
-            panic!("{}", self.cycles);
-        }
         cycles + extra_cycles
     }
 

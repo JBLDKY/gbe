@@ -1,5 +1,6 @@
 mod cpu;
 mod flags_registers;
+mod gpu;
 mod instruction;
 mod registers;
 mod timer;
@@ -45,7 +46,6 @@ fn main() {
     let mut debug_value = cpu.mem.read(0xFF44);
     loop {
         // count cycles
-
         cycles += cpu.step() as usize;
         if debug_value != cpu.mem.read(0xFF44) {
             println!("{:4x}", debug_value);
