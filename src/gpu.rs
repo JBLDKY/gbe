@@ -24,7 +24,25 @@ pub struct GPU {
     line_y: u8,
     line_y_compare: u8,
     mode: Mode,
-    oam: [u8; SPRITE],     // Define Sprite struct and OAM_SIZE constant
-    vram: [u8; VRAM_SIZE], // Define VRAM_SIZE constant
     lcd_status: u8,
+}
+
+impl GPU {
+    pub fn new() -> Self {
+        GPU {
+            vblank_interrupt_enabled: false,
+            hblank_interrupt_enabled: false,
+            oam_interrupt_enabled: false,
+            lyc_interrupt_enabled: false,
+            scroll_x: 0,
+            scroll_y: 0,
+            bg_palette: 0,
+            obj_palette0: 0,
+            obj_palette1: 0,
+            line_y: 0,
+            line_y_compare: 0,
+            mode: Mode::OAMSearch,
+            lcd_status: 0,
+        }
+    }
 }

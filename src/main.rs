@@ -1,16 +1,20 @@
 mod cpu;
+mod emulator;
 mod flags_registers;
 mod gpu;
 mod instruction;
+mod mem;
 mod registers;
 mod timer;
-use crate::cpu::CPU;
 
 use env_logger::{Builder, Env};
 use log::info;
 use log::LevelFilter;
 use std::fs::File;
 use std::io::{self, Read, Write};
+
+use crate::emulator::Emulator;
+use crate::mem::Mem;
 
 fn main() {
     info!("starting up");
@@ -37,24 +41,12 @@ fn main() {
     let boot_rom =
         buffer_from_file("/home/jord/projects/gbe/roms/dmg_boot.bin").expect("boot_rom rom");
 
-    let rom =
+    let game_rom =
         buffer_from_file("/home/jord/projects/gbe/roms/pokemon_blue.gb").expect("invalid rom");
 
-    let mut cpu = CPU::new(&boot_rom, &rom);
-    let mut cycles = 0;
-
-    let mut debug_value = cpu.mem.read(0xFF44);
-    loop {
-        // count cycles
-        cycles += cpu.step() as usize;
-        if debug_value != cpu.mem.read(0xFF44) {
-            println!("{:4x}", debug_value);
-            panic!("{}", cycles);
-        };
-
-        // Dont run as if on steroids
-        // sleep(Duration::from_nanos(20));
-    }
+    let mem = Mem::new(&boot_rom, &game_rom);
+    let emu = Emulator::new(mem);
+    emu.run();
 }
 
 fn buffer_from_file(path: &str) -> io::Result<Vec<u8>> {
