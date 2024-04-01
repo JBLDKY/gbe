@@ -208,6 +208,7 @@ impl Mem {
 pub struct CPU {
     pub registers: Registers,
     pub mem: Mem,
+    pub timer: Timer,
     pub is_halted: bool,
     pub is_interrupted: bool,
     pub interrupts_enabled: bool,
@@ -222,6 +223,7 @@ impl CPU {
         CPU {
             registers: Registers::new(),
             mem: Mem::new(boot_rom, rom),
+            timer: Timer,
             is_halted: false,
             is_interrupted: true,
             interrupts_enabled: false,

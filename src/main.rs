@@ -2,6 +2,7 @@ mod cpu;
 mod flags_registers;
 mod instruction;
 mod registers;
+mod timer;
 use crate::cpu::CPU;
 
 use env_logger::{Builder, Env};
