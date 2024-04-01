@@ -40,9 +40,16 @@ fn main() {
 
     let mut cpu = CPU::new(&boot_rom, &rom);
     let mut cycles = 0;
+
+    let mut debug_value = cpu.mem.read(0xFF44);
     loop {
         // count cycles
+
         cycles += cpu.step() as usize;
+        if debug_value != cpu.mem.read(0xFF44) {
+            println!("{:4x}", debug_value);
+            panic!("")
+        };
 
         // Dont run as if on steroids
         // sleep(Duration::from_nanos(20));

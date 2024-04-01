@@ -452,6 +452,8 @@ impl CPU {
                 }
 
                 LoadVariant::MemOffsetToReg(target) => {
+                    println!("{:#02x?}", self.mem.input_output);
+                    panic!("");
                     let offset = self.next();
                     let address = 0xFF00 + offset as u16;
                     let value = self.mem.read(address);
@@ -1327,10 +1329,10 @@ impl CPU {
         let new_value = modifier(value);
 
         match target {
-            Arithmetic16BitTarget::HL => self.registers.set_hl(value),
-            Arithmetic16BitTarget::BC => self.registers.set_bc(value),
-            Arithmetic16BitTarget::DE => self.registers.set_de(value),
-            Arithmetic16BitTarget::SP => self.sp = value,
+            Arithmetic16BitTarget::HL => self.registers.set_hl(new_value),
+            Arithmetic16BitTarget::BC => self.registers.set_bc(new_value),
+            Arithmetic16BitTarget::DE => self.registers.set_de(new_value),
+            Arithmetic16BitTarget::SP => self.sp = new_value,
         }
         new_value
     }
@@ -1553,25 +1555,26 @@ impl CPU {
 
     #[inline(always)]
     fn increment_16bit(&mut self, target: Arithmetic16BitTarget) {
-        let new_value = self.modify_16bit_register(target, |value| value.wrapping_add(1));
+        self.modify_16bit_register(target, |value| value.wrapping_add(1));
 
-        self.registers.f.zero = new_value == 0;
-        self.registers.f.subtract = false;
-        self.registers.f.half_carry = (new_value & 0xf) == 0x1;
+        // self.registers.f.zero
+        // self.registers.f.subtract
+        // self.registers.f.half_carry
         // self.registers.f.carry
     }
 
     #[inline(always)]
     fn increment_8bit(&mut self, target: Arithmetic8BitTarget) {
-        let new_value = self.modify_8bit_register(target, |value| value.wrapping_add(1));
+        let value = self.read_8bit_register(&target);
+        let new_value = value.wrapping_add(1);
+        self.write_8bit_register(&target, new_value);
 
         self.registers.f.zero = new_value == 0;
         self.registers.f.subtract = false;
-        self.registers.f.half_carry = (new_value & 0xf) == 0x1;
+        self.registers.f.half_carry = (value & 0xf) == 0xf;
         // self.registers.f.carry
     }
 
-    /// Doesn't set anything other than flags.
     #[inline(always)]
     fn compare(&mut self, target: Arithmetic8BitTarget) -> (u16, u8) {
         let pc;
@@ -1586,11 +1589,13 @@ impl CPU {
                 self.read_8bit_register(&target)
             }
         };
-        let new_value = self.registers.a ^ value;
-        self.registers.f.zero = new_value == 0;
-        self.registers.f.subtract = false;
-        self.registers.f.half_carry = false;
-        self.registers.f.carry = false;
+
+        self.registers.f.zero = self.registers.a == value;
+        self.registers.f.subtract = true;
+        // Half Carry Flag (H): Checks if the lower nibble of A is less than that of value (indicating a borrow in the lower 4 bits).
+        self.registers.f.half_carry = (self.registers.a & 0xF) < (value & 0xF);
+        // Carry Flag (C): Checks if A is less than value.
+        self.registers.f.carry = self.registers.a < value;
 
         (self.pc.wrapping_add(pc), cycles)
     }
@@ -1846,6 +1851,21 @@ impl CPU {
             Arithmetic8BitTarget::F => self.registers.f.into(),
             Arithmetic8BitTarget::H => self.registers.h,
             Arithmetic8BitTarget::L => self.registers.l,
+            _ => unimplemented!(),
+        }
+    }
+
+    #[inline(always)]
+    fn write_8bit_register(&mut self, target: &Arithmetic8BitTarget, value: u8) {
+        match target {
+            Arithmetic8BitTarget::A => self.registers.a = value,
+            Arithmetic8BitTarget::B => self.registers.b = value,
+            Arithmetic8BitTarget::C => self.registers.c = value,
+            Arithmetic8BitTarget::D => self.registers.d = value,
+            Arithmetic8BitTarget::E => self.registers.e = value,
+            Arithmetic8BitTarget::F => self.registers.f = value.into(),
+            Arithmetic8BitTarget::H => self.registers.h = value,
+            Arithmetic8BitTarget::L => self.registers.l = value,
             _ => unimplemented!(),
         }
     }
