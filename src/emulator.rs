@@ -27,20 +27,24 @@ impl<T: MemCtx> Emulator<T> {
         let mut last_update = Instant::now();
 
         loop {
-            cycles_this_frame += self.cpu.step(&mut self.mem) as usize;
+            let cycles = self.cpu.step(&mut self.mem) as usize;
+
+            cycles_this_frame += cycles;
+
+            self.gpu.step(&mut self.mem, cycles);
 
             if cycles_this_frame >= CYCLES_PER_FRAME {
-                // Update graphics, handle VBlank, etc.
-                // Reset cycle count for the next frame
                 cycles_this_frame = 0;
 
                 // Frame timing synchronization
                 let now = Instant::now();
                 let elapsed = now.duration_since(last_update);
                 let frame_duration = Duration::from_secs_f64(1.0 / FPS);
+
                 if elapsed < frame_duration {
                     std::thread::sleep(frame_duration - elapsed);
                 }
+
                 last_update = now;
             }
         }

@@ -5,11 +5,13 @@ mod gpu;
 mod instruction;
 mod mem;
 mod registers;
+mod sdl;
 mod timer;
 
 use env_logger::{Builder, Env};
 use log::info;
 use log::LevelFilter;
+use sdl::run_sdl;
 use std::fs::File;
 use std::io::{self, Read, Write};
 
@@ -46,6 +48,9 @@ fn main() {
 
     let mem = Mem::new(&boot_rom, &game_rom);
     let emu = Emulator::new(mem);
+
+    run_sdl();
+
     emu.run();
 }
 

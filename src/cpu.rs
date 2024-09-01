@@ -45,7 +45,7 @@ impl CPU {
             div: Timer::new(),
             is_halted: false,
             is_interrupted: true,
-            interrupts_enabled: false,
+            interrupts_enabled: true,
             sp: 0x00,
             pc: 0x0,
         }
@@ -59,7 +59,7 @@ impl CPU {
         let _extra_pc = 0;
 
         debug!(
-            "A: {:02X} F: {:02X} B: {:02X} C: {:02X} D: {:02X} E: {:02X} H: {:02X} L: {:02X} SP: {:04X} PC: 00:{:04X} ({:02X} {:02X} {:02X} {:02X})",
+            "A: {:02X} F: {:02X} B: {:02X} C: {:02X} D: {:02X} E: {:02X} H: {:02X} L: {:02X} SP: {:04X} PC: 00:{:04X} ({:02X} {:02X} {:02X} {:02X} line: {})",
             self.registers.a,
             u8::from(self.registers.f),  // Assuming `f` is the flag register
             self.registers.b,
@@ -74,6 +74,7 @@ impl CPU {
             mem.read(self.pc.wrapping_add(1)),
             mem.read(self.pc.wrapping_add(2)),
             mem.read(self.pc.wrapping_add(3)),
+            mem.read(0xFF44),
         );
 
         if instruction_byte == 0xcb {
@@ -103,21 +104,21 @@ impl CPU {
         let interrupt = self.timer.step(cycles);
         self.div.step(cycles);
 
-        if self.interrupts_enabled {
-            let interrupt_enable = mem.read(0xFFFF);
-            let interrupt_flag = mem.read(0xFF0F);
-            let interrupt_requested = interrupt_enable & interrupt_flag;
-
-            if interrupt_requested != 0 && interrupt_requested & 0x01 != 0 {
-                // VBLANK
-                self.push(self.pc, mem);
-
-                self.pc = 0x0040; // VBlank address, todo create a const
-
-                let interrupt_flag = mem.read(0xFF0F);
-                mem.write(0xFF0F, interrupt_flag & 0xFE);
-            }
-        }
+        // if self.interrupts_enabled {
+        //     let interrupt_enable = mem.read(0xFFFF);
+        //     let interrupt_flag = mem.read(0xFF0F);
+        //     let interrupt_requested = interrupt_enable & interrupt_flag;
+        //
+        //     if interrupt_requested != 0 && interrupt_requested & 0x01 != 0 {
+        //         // VBLANK
+        //         self.push(self.pc, mem);
+        //
+        //         self.pc = 0x0040; // VBlank address, todo create a const
+        //
+        //         let interrupt_flag = mem.read(0xFF0F);
+        //         mem.write(0xFF0F, interrupt_flag & 0xFE);
+        //     }
+        // }
 
         self.pc = next_pc;
         cycles + extra_cycles
