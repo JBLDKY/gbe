@@ -5,15 +5,71 @@ use sdl2::rect::Rect;
 use std::fmt;
 use std::time::Duration;
 
+const TILEMAP_HEIGHT: usize = 32;
+const TILEMAP_WIDTH: usize = 32;
+const TILE_SIZE: u32 = 8;
 const SCREEN_WIDTH: u32 = 160;
 const SCREEN_HEIGHT: u32 = 144;
 const SCALE: u32 = 3;
 
-#[derive(Copy, Clone, Debug)]
+struct TileMap {
+    tiles: [[u8; TILEMAP_WIDTH]; TILEMAP_HEIGHT],
+}
+
+impl TileMap {
+    fn new() -> Self {
+        Self {
+            tiles: [[0; TILEMAP_WIDTH]; TILEMAP_HEIGHT],
+        }
+    }
+
+    fn set_tile(&mut self, x: usize, y: usize, tile_index: u8) {
+        self.tiles[y][x] = tile_index;
+    }
+
+    fn render(
+        &self,
+        canvas: &mut sdl2::render::Canvas<sdl2::video::Window>,
+        tiles: &[Tile],
+        scx: u8,
+        scy: u8,
+    ) -> Result<(), String> {
+        for y in 0..SCREEN_HEIGHT {
+            for x in 0..SCREEN_WIDTH {
+                let map_x = (x as u16 + scx as u16) % (TILEMAP_WIDTH as u16 * TILE_SIZE as u16);
+                let map_y = (y as u16 + scy as u16) % (TILEMAP_WIDTH as u16 * TILE_SIZE as u16);
+
+                let tile_x = (map_x / TILE_SIZE as u16) as usize;
+                let tile_y = (map_y / TILE_SIZE as u16) as usize;
+
+                let tile_index = self.tiles[tile_y][tile_x] as usize;
+                let tile = &tiles[tile_index];
+
+                let pixel_x = map_x % TILE_SIZE as u16;
+                let pixel_y = map_y % TILE_SIZE as u16;
+
+                let pixel = tile.lines[pixel_y as usize][pixel_x as usize];
+                let color = pixel.as_rgb();
+
+                canvas.set_draw_color(color);
+                canvas.fill_rect(Rect::new(
+                    (x * SCALE) as i32,
+                    (y * SCALE) as i32,
+                    SCALE,
+                    SCALE,
+                ))?;
+            }
+        }
+        Ok(())
+    }
+}
+
+#[derive(Copy, Clone, Debug, Default)]
 enum Pixel {
     Zero,
     One,
     Two,
+    #[default]
     Three,
 }
 
@@ -50,7 +106,7 @@ impl Pixel {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct Tile {
     lines: [[Pixel; 8]; 8],
 }
@@ -73,14 +129,6 @@ impl Tile {
     }
 }
 
-impl Default for Tile {
-    fn default() -> Self {
-        Self {
-            lines: [[Pixel::Zero; 8]; 8],
-        }
-    }
-}
-
 impl fmt::Display for Tile {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for line in self.lines {
@@ -95,6 +143,7 @@ impl fmt::Display for Tile {
         Ok(())
     }
 }
+
 impl From<[u8; 16]> for Tile {
     fn from(sixteen_bytes: [u8; 16]) -> Self {
         let mut tile = Self::default();
@@ -135,12 +184,38 @@ pub fn run_sdl() -> Result<(), String> {
 
     let mut event_pump = sdl_context.event_pump()?;
 
-    let tile = Tile::from([
-        0xFF, 0x00, 0x7E, 0xFF, 0x85, 0x81, 0x89, 0x83, 0x93, 0x85, 0xA5, 0x8B, 0xC9, 0x97, 0x7E,
-        0xFF,
-    ]);
+    let mut tiles = [(); 32].map(|_| {
+        Tile::from([
+            0xFF, 0x00, 0x7E, 0xFF, 0x85, 0x81, 0x89, 0x83, 0x93, 0x85, 0xA5, 0x8B, 0xC9, 0x97,
+            0x7E, 0xFF,
+        ])
+    });
 
-    println!("{}", tile);
+    tiles[0] = Tile::default();
+    tiles[2] = Tile::default();
+    tiles[4] = Tile::default();
+    tiles[6] = Tile::default();
+    tiles[8] = Tile::default();
+    tiles[10] = Tile::default();
+    tiles[12] = Tile::default();
+    tiles[14] = Tile::default();
+    tiles[16] = Tile::default();
+    tiles[18] = Tile::default();
+    tiles[20] = Tile::default();
+    tiles[22] = Tile::default();
+    tiles[24] = Tile::default();
+    tiles[26] = Tile::default();
+    tiles[28] = Tile::default();
+    tiles[30] = Tile::default();
+
+    let mut tile_map = TileMap::new();
+    for y in 0..TILEMAP_HEIGHT {
+        for x in 0..TILEMAP_WIDTH {
+            tile_map.set_tile(x, y, ((x + y) % 2) as u8);
+        }
+    }
+    let mut scx = 0;
+    let mut scy = 0;
 
     'running: loop {
         for event in event_pump.poll_iter() {
@@ -155,9 +230,13 @@ pub fn run_sdl() -> Result<(), String> {
         }
 
         canvas.clear();
-        tile.render(&mut canvas)?;
+        tile_map.render(&mut canvas, &tiles, scx, scy)?;
         canvas.present();
         std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 30));
+
+        // enables scrolling
+        scx = scx.wrapping_add(1);
+        scy = scy.wrapping_add(1);
     }
 
     Ok(())
