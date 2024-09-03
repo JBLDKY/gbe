@@ -49,7 +49,7 @@ fn main() {
     let mem = Mem::new(&boot_rom, &game_rom);
     let emu = Emulator::new(mem);
 
-    run_sdl();
+    // run_sdl();
 
     emu.run();
 }
