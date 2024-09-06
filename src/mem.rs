@@ -72,6 +72,8 @@ pub trait MemCtx {
         F: FnOnce(u8) -> u8;
 
     fn write(&mut self, addr: u16, value: u8);
+
+    fn lcdc_is_on(&self) -> bool;
 }
 
 #[derive(Debug)]
@@ -144,6 +146,10 @@ impl MemCtx for Mem {
             0xFF80..=0xFFFE => self.high_ram[addr as usize - 0xFF80] = value,
             0xFFFF => self.interrupt = value.into(),
         }
+    }
+
+    fn lcdc_is_on(&self) -> bool {
+        self.read(0xFF40) & 0b1000_0000 != 0
     }
 }
 

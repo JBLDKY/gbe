@@ -29,19 +29,19 @@ const BASE_CLOCK_SPEED: usize = 4_194_304;
 
 #[derive(Debug)]
 enum Frequency {
-    ZERO,
-    ONE,
-    TWO,
-    THREE,
+    Zero,
+    One,
+    Two,
+    Three,
 }
 
 impl Frequency {
     fn herz(&self) -> usize {
         match self {
-            Frequency::ZERO => 4_096,
-            Frequency::ONE => 262_144,
-            Frequency::TWO => 65_536,
-            Frequency::THREE => 16_384,
+            Frequency::Zero => 4_096,
+            Frequency::One => 262_144,
+            Frequency::Two => 65_536,
+            Frequency::Three => 16_384,
         }
     }
 }
@@ -62,7 +62,7 @@ impl Timer {
             counter: 0,                 // FF05 - Timer Counter (TIMA register)
             modulo: 0,                  // FF06 - Timer Modulo
             tac: false,                 // FF07 on/off
-            frequency: Frequency::ZERO, // FF07 mode
+            frequency: Frequency::Zero, // FF07 mode
         }
     }
 

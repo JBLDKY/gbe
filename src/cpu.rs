@@ -56,24 +56,24 @@ impl CPU {
         let mut extra_cycles = 0;
         let _extra_pc = 0;
 
-        debug!(
-            "A: {:02X} F: {:02X} B: {:02X} C: {:02X} D: {:02X} E: {:02X} H: {:02X} L: {:02X} SP: {:04X} PC: 00:{:04X} ({:02X} {:02X} {:02X} {:02X} line: {})",
-            self.registers.a,
-            u8::from(self.registers.f),  // Assuming `f` is the flag register
-            self.registers.b,
-            self.registers.c,
-            self.registers.d,
-            self.registers.e,
-            self.registers.h,
-            self.registers.l,
-            self.sp,
-            self.pc,
-            mem.read(self.pc),
-            mem.read(self.pc.wrapping_add(1)),
-            mem.read(self.pc.wrapping_add(2)),
-            mem.read(self.pc.wrapping_add(3)),
-            mem.read(0xFF44),
-        );
+        // debug!(
+        //     "A: {:02X} F: {:02X} B: {:02X} C: {:02X} D: {:02X} E: {:02X} H: {:02X} L: {:02X} SP: {:04X} PC: 00:{:04X} ({:02X} {:02X} {:02X} {:02X}, lcdc: {})",
+        //     self.registers.a,
+        //     u8::from(self.registers.f),  // Assuming `f` is the flag register
+        //     self.registers.b,
+        //     self.registers.c,
+        //     self.registers.d,
+        //     self.registers.e,
+        //     self.registers.h,
+        //     self.registers.l,
+        //     self.sp,
+        //     self.pc,
+        //     mem.read(self.pc),
+        //     mem.read(self.pc.wrapping_add(1)),
+        //     mem.read(self.pc.wrapping_add(2)),
+        //     mem.read(self.pc.wrapping_add(3)),
+        //     mem.read(0xFF40) & 0b1000_0000 != 0
+        // );
 
         if instruction_byte == 0xcb {
             // self.pc = self.pc.wrapping_add(1);

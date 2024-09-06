@@ -7,6 +7,7 @@ mod mem;
 mod registers;
 mod sdl;
 mod timer;
+mod units;
 
 use env_logger::{Builder, Env};
 use log::info;
