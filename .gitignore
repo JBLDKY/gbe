@@ -1,1 +1,5 @@
 /target
+/roms/*
+*.ipynb
+*.txt
+
