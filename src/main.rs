@@ -12,7 +12,6 @@ mod units;
 use env_logger::{Builder, Env};
 use log::info;
 use log::LevelFilter;
-use sdl::run_sdl;
 use std::fs::File;
 use std::io::{self, Read, Write};
 

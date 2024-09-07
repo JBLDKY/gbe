@@ -1,6 +1,6 @@
-#![allow(dead_code)]
+#![allow(dead_code, clippy::upper_case_acronyms)]
 
-use log::{debug, info};
+use log::info;
 
 use crate::instruction::AnyTarget;
 use crate::instruction::Arithmetic16BitTarget;

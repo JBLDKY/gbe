@@ -1,5 +1,5 @@
 use crate::mem::Mem;
-use crate::{cpu::CPU, gpu::GPU, mem::MemCtx};
+use crate::{cpu::CPU, gpu::GPU};
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::PixelFormatEnum;
 use sdl2::rect::Rect;

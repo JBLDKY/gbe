@@ -1,3 +1,4 @@
+#![allow(clippy::upper_case_acronyms)]
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
 pub enum Arithmetic16BitTarget {
