@@ -1,4 +1,7 @@
-use crate::mem::MemCtx;
+use crate::{
+    emulator::{SCREEN_BITS, SCREEN_HEIGHT, SCREEN_WIDTH},
+    mem::MemCtx,
+};
 use log::debug;
 
 #[derive(Debug, Clone, Copy)]
@@ -18,9 +21,14 @@ pub struct GPU {
     lcd_status: u8,
     cycles: u16,
     frame: u64,
+    frame_buffer: [u8; SCREEN_BITS as usize],
 }
 
 impl GPU {
+    pub fn get_frame_buffer(&self) -> [u8; SCREEN_BITS as usize] {
+        self.frame_buffer
+    }
+
     pub fn new() -> Self {
         GPU {
             oam_interrupt_enabled: false,
@@ -30,6 +38,7 @@ impl GPU {
             lcd_status: 0,
             cycles: 0,
             frame: 0,
+            frame_buffer: [0; SCREEN_BITS as usize],
         }
     }
 
