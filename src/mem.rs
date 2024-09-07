@@ -74,6 +74,8 @@ pub trait MemCtx {
     fn write(&mut self, addr: u16, value: u8);
 
     fn lcdc_is_on(&self) -> bool;
+
+    fn get_vram_mut(&mut self) -> [u8; VIDEO_RAM];
 }
 
 #[derive(Debug)]
@@ -150,6 +152,10 @@ impl MemCtx for Mem {
 
     fn lcdc_is_on(&self) -> bool {
         self.read(0xFF40) & 0b1000_0000 != 0
+    }
+
+    fn get_vram_mut(&mut self) -> [u8; VIDEO_RAM] {
+        self.vram
     }
 }
 

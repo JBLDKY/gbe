@@ -12,18 +12,19 @@ const SCREEN_WIDTH: u32 = 160;
 const SCREEN_HEIGHT: u32 = 144;
 const SCALE: u32 = 3;
 
-struct TileMap {
-    tiles: [[u8; TILEMAP_WIDTH]; TILEMAP_HEIGHT],
+#[derive(Debug)]
+pub struct TileMap {
+    pub tiles: [[u8; TILEMAP_WIDTH]; TILEMAP_HEIGHT],
 }
 
 impl TileMap {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             tiles: [[0; TILEMAP_WIDTH]; TILEMAP_HEIGHT],
         }
     }
 
-    fn set_tile(&mut self, x: usize, y: usize, tile_index: u8) {
+    pub fn set_tile(&mut self, x: usize, y: usize, tile_index: u8) {
         self.tiles[y][x] = tile_index;
     }
 
@@ -66,7 +67,7 @@ impl TileMap {
 }
 
 #[derive(Copy, Clone, Debug, Default)]
-enum Pixel {
+pub enum Pixel {
     Zero,
     One,
     Two,
@@ -75,7 +76,7 @@ enum Pixel {
 }
 
 impl Pixel {
-    fn as_rgb(&self) -> Color {
+    pub fn as_rgb(&self) -> Color {
         match self {
             Pixel::Zero => Color::RGB(255, 255, 255),
             Pixel::One => Color::RGB(192, 192, 192),
@@ -107,9 +108,9 @@ impl Pixel {
     }
 }
 
-#[derive(Debug, Default)]
-struct Tile {
-    lines: [[Pixel; 8]; 8],
+#[derive(Debug, Default, Clone)]
+pub struct Tile {
+    pub lines: [[Pixel; 8]; 8],
 }
 
 impl Tile {

@@ -2,10 +2,10 @@ use crate::{cpu::CPU, gpu::GPU, mem::MemCtx};
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::PixelFormatEnum;
 use sdl2::rect::Rect;
-use sdl2::render::{Texture, TextureCreator};
-use sdl2::video::{Window, WindowContext};
+use sdl2::render::Texture;
+use sdl2::video::Window;
+use sdl2::EventPump;
 use sdl2::{event::Event, render::Canvas};
-use sdl2::{EventPump, Sdl};
 use std::time::{Duration, Instant};
 
 pub const TILEMAP_HEIGHT: usize = 32;
@@ -76,7 +76,7 @@ impl Screen {
         self.canvas.clear();
         self.canvas
             .copy(
-                &texture,
+                texture,
                 None,
                 Some(Rect::new(0, 0, SCREEN_WIDTH * SCALE, SCREEN_HEIGHT * SCALE)),
             )
@@ -126,10 +126,7 @@ impl<T: MemCtx> Emulator<T> {
             if cycles_this_frame >= CYCLES_PER_FRAME {
                 cycles_this_frame = 0;
 
-                // screen.render(
-                //     &mut texture,
-                //     &self.mem.get_vram()[0..(SCREEN_HEIGHT * SCREEN_WIDTH) as usize],
-                // );
+                screen.render(&mut texture, &self.gpu.get_frame_buffer());
 
                 // Frame timing synchronization
                 let now = Instant::now();
