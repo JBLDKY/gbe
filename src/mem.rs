@@ -138,7 +138,9 @@ impl MemCtx for Mem {
                 let switchable_addr = addr as usize - 0x4000;
                 self.switch_rom[switchable_addr % self.switch_rom.len()] = value
             }
-            0x8000..=0x9FFF => self.vram[addr as usize - 0x8000] = value,
+            0x8000..=0x9FFF => {
+                self.vram[addr as usize - 0x8000] = value;
+            }
             0xA000..=0xBFFF => self.switch_ram[addr as usize - 0xA000] = value,
             0xC000..=0xDFFF => self.internal_ram[addr as usize - 0xC000] = value,
             0xE000..=0xFDFF => self.internal_ram[addr as usize - 0xE000] = value,
