@@ -1,7 +1,7 @@
+#![allow(clippy::upper_case_acronyms)]
 use crate::{
     emulator::{SCREEN_BITS, SCREEN_HEIGHT, SCREEN_WIDTH},
     mem::{Mem, MemCtx},
-    sdl::{Tile, TileMap},
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -82,9 +82,6 @@ pub struct GPU {
     /// Gameboy constantly compares LYC and LY. If they are equal, Bit 2 of 0xFF41 is set.
     /// That then triggers a STAT interrupt
     lyc: u8,
-    bgp: u8,
-    obp0: u8,
-    obp1: u8,
     /// Window Y - Address: 0xFF4A
     ///
     /// Specifies the on-screen Y-coordinate of the Window's top-left pixel.
@@ -97,6 +94,11 @@ pub struct GPU {
     ///
     /// Specifies the on-screen X-coordinate of the Window's top-left pixel.
     wx: u8,
+
+    /// TODO: Document these
+    bgp: u8,
+    obp0: u8,
+    obp1: u8,
 }
 
 impl GPU {
@@ -203,10 +205,10 @@ impl GPU {
 
         if self.frame % 100 == 0 {
             // Generic logging every 100th frame
-            println!(
-                "Frame: {}, LCDC: {:02X}, STAT: {:02X}, SCY: {:02X}, SCX: {:02X}",
-                self.frame, self.lcdc, self.stat, self.scy, self.scx
-            );
+            // println!(
+            //     "Frame: {}, LCDC: {:02X}, STAT: {:02X}, SCY: {:02X}, SCX: {:02X}",
+            //     self.frame, self.lcdc, self.stat, self.scy, self.scx
+            // );
         }
 
         if self.ly < 144 {
@@ -220,13 +222,10 @@ impl GPU {
             }
         };
 
+        // Stat inturrupt
         self.stat &= 0xFC;
         if self.ly == self.lyc {
             self.stat |= 0x04;
-        }
-
-        if self.ly == 143 {
-            self.frame += 1;
         }
 
         // Write the updated attributes that were read from memory earlier
@@ -236,52 +235,83 @@ impl GPU {
 
     fn render_scanline<T: MemCtx>(&mut self, mem: &T) {
         let tile_map_addr = if (self.lcdc & 0x08) != 0 {
-            0x9C00
+            0x9C00 // Bit 3 (0x08) set: use 9C00-9FFF
         } else {
-            0x9800
+            0x9800 // Bit 3 (0x08) unset: use 9800-9BFF
         };
+
         let tile_data_addr = if (self.lcdc & 0x10) != 0 {
-            0x8000
+            0x8000 // Bit 4 (0x10) -unset: use 0x8000-0x8fff (unsigned addressing)
         } else {
-            0x8800
+            0x8800 // Bit 4 (0x10) set: use 0x8800-0x8fff (unsigned addressing)
         };
 
         for x in 0..SCREEN_WIDTH {
+            // Get the X and Y positions in the BG map
             let scroll_x = (x as u16 + self.scx as u16) % 256;
             let scroll_y = (self.ly as u16 + self.scy as u16) % 256;
 
+            // Divide by 8 to get the curent tile
             let tile_x = scroll_x / 8;
             let tile_y = scroll_y / 8;
 
+            // get the address of the tile
             let tile_addr = tile_map_addr + tile_y * 32 + tile_x;
+
+            // Look up the address to get the tilenumber
             let tile_num = mem.read(tile_addr);
 
+            // Get the address of the tiledata
             let tile_data_addr = if tile_data_addr == 0x8000 {
+                // the 0x8000 method uses unsigned addresing
                 tile_data_addr + (tile_num as u16) * 16
             } else {
-                (tile_data_addr as i32 + ((tile_num as i8 as i32) * 16)) as u16
+                // the 0x8800 method uses signed addresing
+                (tile_data_addr as i32 + ((tile_num as i32) * 16)) as u16
             };
 
+            // There are 8 lines per tile. One tile is 16 bytes. One line is 2 bytes.
+            // Hence `(scroll_y % 8) * 2`.
             let line = (scroll_y % 8) * 2;
+
+            // Read the two bytes for this line
             let low_byte = mem.read(tile_data_addr + line);
             let high_byte = mem.read(tile_data_addr + line + 1);
 
+            // Determine the bit we're after.
+            // Each tile is 8x8, we determined the Y earlier, here we determine the x.
             let bit = 7 - (scroll_x % 8);
+
+            // Get the right color
             let color_num = ((high_byte >> bit) & 1) << 1 | ((low_byte >> bit) & 1);
+            let color = Color::from(color_num);
 
-            let color = match color_num {
-                0 => 255,
-                1 => 192,
-                2 => 96,
-                3 => 0,
-                _ => unreachable!(),
-            };
-
+            // Get the index for the color byte and then set the color bytes
             let buffer_index = (self.ly as usize * SCREEN_WIDTH as usize + x as usize) * 4;
-            self.frame_buffer[buffer_index] = color;
-            self.frame_buffer[buffer_index + 1] = color;
-            self.frame_buffer[buffer_index + 2] = color;
-            self.frame_buffer[buffer_index + 3] = 255;
+            self.frame_buffer[buffer_index] = color as u8;
+            self.frame_buffer[buffer_index + 1] = color as u8;
+            self.frame_buffer[buffer_index + 2] = color as u8;
+            self.frame_buffer[buffer_index + 3] = 255; // TODO: Is this always opaque?
+        }
+    }
+}
+
+#[derive(Copy, Clone)]
+enum Color {
+    Lightest = 255,
+    Light = 192,
+    Dark = 96,
+    Darkest = 0,
+}
+
+impl From<u8> for Color {
+    fn from(color_num: u8) -> Color {
+        match color_num {
+            0 => Color::Lightest,
+            1 => Color::Light,
+            2 => Color::Dark,
+            3 => Color::Darkest,
+            _ => Color::Darkest,
         }
     }
 }

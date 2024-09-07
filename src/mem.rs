@@ -14,15 +14,9 @@
 /// Game ROM            - 0x0100    - 0x03FF
 /// Boot ROM            - 0x0000    - 0x00FF
 
-const INTERRUPT_REGISTER: usize = 0xFFFF;
-
 const HIGH_RAM_START: usize = 0xFF80;
 const HIGH_RAM_END: usize = 0xFFFE;
 const HIGH_RAM: usize = HIGH_RAM_END - HIGH_RAM_START + 1;
-
-// const RESTRICTED_HIGH_START: usize = 0xFF80;
-// const RESTRICTED_HIGH_END: usize = 0xFFFE;
-// const RESTRICTED_HIGH: usize = RESTRICTED_HIGH_END - RESTRICTED_HIGH_START + 1;
 
 const INPUT_OUTPUT: usize = INPUT_OUTPUT_END - INPUT_OUTPUT_START + 1;
 const INPUT_OUTPUT_START: usize = 0xFF00;
@@ -56,10 +50,6 @@ const SWITCH_ROM: usize = SWITCH_ROM_END - SWITCH_ROM_START + 1;
 const SWITCH_ROM_START: usize = 0x4000;
 const SWITCH_ROM_END: usize = 0x7FFF;
 
-const GAME_ROM: usize = ROM_END - ROM_START + 1;
-const GAME_ROM_START: usize = 0x0100;
-const GAME_ROM_END: usize = 0x39FF;
-
 const ROM: usize = ROM_END - ROM_START + 1;
 const ROM_START: usize = 0x0000;
 const ROM_END: usize = 0x00FF;
@@ -74,8 +64,6 @@ pub trait MemCtx {
     fn write(&mut self, addr: u16, value: u8);
 
     fn lcdc_is_on(&self) -> bool;
-
-    fn get_vram_mut(&mut self) -> [u8; VIDEO_RAM];
 }
 
 #[derive(Debug)]
@@ -85,11 +73,12 @@ pub struct Mem {
     pub vram: [u8; VIDEO_RAM],
     switch_ram: [u8; SWITCH_RAM],
     internal_ram: [u8; INTERNAL_RAM],
+    #[allow(dead_code)] // TODO: remove?
     restricted_low: [u8; RESTRICTED_LOW],
     sprite: [u8; SPRITE],
+    #[allow(dead_code)] // TODO: remove?
     restricted_mid: [u8; RESTRICTED_MID],
     input_output: [u8; INPUT_OUTPUT],
-    // restricted_high: [u8; RESTRICTED_HIGH],
     high_ram: [u8; HIGH_RAM],
     interrupt: usize,
 }
@@ -154,10 +143,6 @@ impl MemCtx for Mem {
 
     fn lcdc_is_on(&self) -> bool {
         self.read(0xFF40) & 0b1000_0000 != 0
-    }
-
-    fn get_vram_mut(&mut self) -> [u8; VIDEO_RAM] {
-        self.vram
     }
 }
 

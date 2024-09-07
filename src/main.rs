@@ -5,9 +5,7 @@ mod gpu;
 mod instruction;
 mod mem;
 mod registers;
-mod sdl;
 mod timer;
-mod units;
 
 use env_logger::{Builder, Env};
 use log::info;
@@ -48,8 +46,6 @@ fn main() {
 
     let mem = Mem::new(&boot_rom, &game_rom);
     let emu = Emulator::new(mem);
-
-    // run_sdl();
 
     emu.run();
 }

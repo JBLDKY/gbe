@@ -9,9 +9,6 @@ use sdl2::EventPump;
 use sdl2::{event::Event, render::Canvas};
 use std::time::{Duration, Instant};
 
-pub const TILEMAP_HEIGHT: usize = 32;
-pub const TILEMAP_WIDTH: usize = 32;
-pub const TILE_SIZE: u32 = 8;
 pub const SCREEN_WIDTH: u32 = 160;
 pub const SCREEN_HEIGHT: u32 = 144;
 pub const SCREEN_BITS: u32 = SCREEN_WIDTH * SCREEN_HEIGHT * 4;
@@ -74,7 +71,7 @@ impl Screen {
         EventResult::Continue
     }
 
-    fn test_render(&mut self, texture: &mut Texture, frame_buffer: &[u8]) {
+    fn test_render(&mut self, texture: &mut Texture, _: &[u8]) {
         let mut test_buffer = vec![0; (SCREEN_WIDTH * SCREEN_HEIGHT * 4) as usize];
         for y in 0..SCREEN_HEIGHT {
             for x in 0..SCREEN_WIDTH {

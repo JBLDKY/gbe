@@ -99,24 +99,8 @@ impl CPU {
             panic!("UNKOWN INSTRUCTION FOUND FOR: {:#04x}", instruction_byte);
         };
 
-        let interrupt = self.timer.step(cycles);
+        // TODO: Implement
         self.div.step(cycles);
-
-        // if self.interrupts_enabled {
-        //     let interrupt_enable = mem.read(0xFFFF);
-        //     let interrupt_flag = mem.read(0xFF0F);
-        //     let interrupt_requested = interrupt_enable & interrupt_flag;
-        //
-        //     if interrupt_requested != 0 && interrupt_requested & 0x01 != 0 {
-        //         // VBLANK
-        //         self.push(self.pc, mem);
-        //
-        //         self.pc = 0x0040; // VBlank address, todo create a const
-        //
-        //         let interrupt_flag = mem.read(0xFF0F);
-        //         mem.write(0xFF0F, interrupt_flag & 0xFE);
-        //     }
-        // }
 
         self.pc = next_pc;
         cycles + extra_cycles
