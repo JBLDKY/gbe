@@ -2,7 +2,7 @@ use crate::{
     emulator::{
         SCREEN_BITS, SCREEN_HEIGHT, SCREEN_WIDTH, TILEMAP_HEIGHT, TILEMAP_WIDTH, TILE_SIZE,
     },
-    mem::MemCtx,
+    mem::{Mem, MemCtx},
     sdl::{Tile, TileMap},
 };
 use log::debug;
@@ -29,11 +29,34 @@ pub struct GPU {
     scx: u8,
     scy: u8,
     frame_buffer: [u8; SCREEN_BITS as usize],
+
+    lcdc: u8,
+    stat: u8,
+    lyc: u8,
+    bgp: u8,
+    obp0: u8,
+    obp1: u8,
+    wy: u8,
+    wx: u8,
 }
 
 impl GPU {
     pub fn get_frame_buffer(&self) -> [u8; SCREEN_BITS as usize] {
         self.frame_buffer
+    }
+
+    fn set_flags(&mut self, mem: &Mem) {
+        self.lcdc = mem.read(0xFF40);
+        self.stat = mem.read(0xFF41);
+        self.scy = mem.read(0xFF42);
+        self.scx = mem.read(0xFF43);
+        self.ly = mem.read(0xFF44);
+        self.lyc = mem.read(0xFF45);
+        self.bgp = mem.read(0xFF47);
+        self.obp0 = mem.read(0xFF48);
+        self.obp1 = mem.read(0xFF49);
+        self.wy = mem.read(0xFF4A);
+        self.wx = mem.read(0xFF4B);
     }
 
     pub fn new() -> Self {
@@ -50,10 +73,21 @@ impl GPU {
             scx: 0,
             scy: 0,
             frame_buffer: [0; SCREEN_BITS as usize],
+
+            lcdc: 0,
+            stat: 0,
+            lyc: 0,
+            bgp: 0,
+            obp0: 0,
+            obp1: 0,
+            wy: 0,
+            wx: 0,
         }
     }
 
-    pub fn step<T: MemCtx>(&mut self, mem: &mut T, cycles: usize) {
+    pub fn step(&mut self, mem: &mut Mem, cycles: usize) {
+        self.set_flags(mem);
+
         if !mem.lcdc_is_on() {
             return;
         }

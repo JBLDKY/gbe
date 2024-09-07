@@ -1,3 +1,4 @@
+use crate::mem::Mem;
 use crate::{cpu::CPU, gpu::GPU, mem::MemCtx};
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::PixelFormatEnum;
@@ -19,6 +20,7 @@ pub const SCALE: u32 = 3;
 enum EventResult {
     Continue,
     Stop,
+    ToggleTestScreen,
 }
 pub struct Screen {
     canvas: Canvas<Window>,
@@ -61,6 +63,10 @@ impl Screen {
                     keycode: Some(Keycode::Escape),
                     ..
                 } => return EventResult::Stop,
+                Event::KeyDown {
+                    keycode: Some(Keycode::T),
+                    ..
+                } => return EventResult::ToggleTestScreen,
                 _ => {}
             }
         }
@@ -68,7 +74,35 @@ impl Screen {
         EventResult::Continue
     }
 
+    fn test_render(&mut self, texture: &mut Texture, frame_buffer: &[u8]) {
+        let mut test_buffer = vec![0; (SCREEN_WIDTH * SCREEN_HEIGHT * 4) as usize];
+        for y in 0..SCREEN_HEIGHT {
+            for x in 0..SCREEN_WIDTH {
+                let index = ((y * SCREEN_WIDTH + x) * 4) as usize;
+                test_buffer[index] = (x % 256) as u8;
+                test_buffer[index + 1] = (y % 256) as u8;
+                test_buffer[index + 2] = 128;
+                test_buffer[index + 3] = 255;
+            }
+        }
+
+        texture
+            .update(None, &test_buffer, SCREEN_WIDTH as usize * 4)
+            .unwrap();
+
+        self.canvas.clear();
+        self.canvas
+            .copy(
+                texture,
+                None,
+                Some(Rect::new(0, 0, SCREEN_WIDTH * SCALE, SCREEN_HEIGHT * SCALE)),
+            )
+            .unwrap();
+        self.canvas.present();
+    }
+
     fn render(&mut self, texture: &mut Texture, frame_buffer: &[u8]) {
+        // dbg!(frame_buffer);
         texture
             .update(None, frame_buffer, SCREEN_WIDTH as usize * 4)
             .unwrap();
@@ -85,14 +119,14 @@ impl Screen {
     }
 }
 
-pub struct Emulator<T: MemCtx> {
+pub struct Emulator {
     pub cpu: CPU,
     pub gpu: GPU,
-    pub mem: T,
+    pub mem: Mem,
 }
 
-impl<T: MemCtx> Emulator<T> {
-    pub fn new(mem: T) -> Self {
+impl Emulator {
+    pub fn new(mem: Mem) -> Self {
         Emulator {
             cpu: CPU::new(),
             gpu: GPU::new(),
@@ -101,7 +135,7 @@ impl<T: MemCtx> Emulator<T> {
     }
 }
 
-impl<T: MemCtx> Emulator<T> {
+impl Emulator {
     pub fn run(mut self) {
         const CYCLES_PER_SECOND: f64 = 4_194_304.0; // Game Boy CPU speed
         const FPS: f64 = 59.7;
@@ -109,6 +143,8 @@ impl<T: MemCtx> Emulator<T> {
 
         let mut cycles_this_frame = 0;
         let mut last_update = Instant::now();
+
+        let mut render_test_screen = false;
 
         let mut screen = Screen::new();
         let texture_creator = screen.canvas.texture_creator();
@@ -126,7 +162,11 @@ impl<T: MemCtx> Emulator<T> {
             if cycles_this_frame >= CYCLES_PER_FRAME {
                 cycles_this_frame = 0;
 
-                screen.render(&mut texture, &self.gpu.get_frame_buffer());
+                if render_test_screen {
+                    screen.test_render(&mut texture, &self.gpu.get_frame_buffer());
+                } else {
+                    screen.render(&mut texture, &self.gpu.get_frame_buffer());
+                }
 
                 // Frame timing synchronization
                 let now = Instant::now();
@@ -142,6 +182,7 @@ impl<T: MemCtx> Emulator<T> {
 
             match screen.handle_event() {
                 EventResult::Continue => (),
+                EventResult::ToggleTestScreen => render_test_screen = !render_test_screen,
                 EventResult::Stop => break 'running,
             }
         }
