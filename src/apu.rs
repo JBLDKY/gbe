@@ -2,6 +2,13 @@
 
 use crate::mem::{Mem, MemCtx};
 
+enum Channel {
+    One,
+    Two,
+    Three,
+    Four,
+}
+
 #[derive(Debug, Default)]
 struct ChannelOne {
     ///
@@ -118,6 +125,20 @@ struct ChannelOne {
     ///
     /// https://gbdev.io/pandocs/Audio_Registers.html
     period_high_and_control: u8,
+}
+
+impl ChannelOne {
+    fn get_frequency(&self) -> u16 {
+        (((self.period_high_and_control & 0x07) as u16) << 8) | self.period_low as u16
+    }
+
+    fn get_volume(&self) -> u16 {
+        (self.volume_and_envelope >> 4) as u16
+    }
+
+    fn get_duty(&self) -> u16 {
+        (self.length_timer_and_duty_cycle >> 6) as u16
+    }
 }
 
 /// Identical to Channel 1
@@ -325,7 +346,7 @@ struct ChannelFour {
 }
 
 #[derive(Debug, Default)]
-struct APU {
+pub struct APU {
     /// NR52 Audio Master Control - Address: 0xFF26
     ///
     /// ┌───┬───┬───┬───┬───┬───┬───┬───┐
@@ -398,6 +419,31 @@ struct APU {
 }
 
 impl APU {
+    fn is_turned_on(&self) -> bool {
+        (self.audio_master_control & 0x80) != 0
+    }
+
+    fn is_channel_on(&self, channel: Channel) -> bool {
+        match channel {
+            Channel::One => (self.audio_master_control & 0x01) != 0,
+            Channel::Two => (self.audio_master_control & 0x02) != 0,
+            Channel::Three => (self.audio_master_control & 0x03) != 0,
+            Channel::Four => (self.audio_master_control & 0x04) != 0,
+        }
+    }
+
+    pub fn step(&mut self, mem: &mut Mem, cycles: usize) -> (i16, i16) {
+        self.read_flags(mem);
+
+        if !self.is_turned_on() {
+            return (0, 0);
+        }
+
+        self.write_flags(mem);
+
+        (0, 0)
+    }
+
     fn read_flags(&mut self, mem: &Mem) {
         // Global
         self.audio_master_control = mem.read(0xFF26);
@@ -448,5 +494,45 @@ impl APU {
         self.channel_four.volume_and_envelope = mem.read(0xFF42);
         self.channel_four.frequency_and_randomness = mem.read(0xFF43);
         self.channel_four.control = mem.read(0xFF44);
+    }
+
+    fn write_flags(&self, mem: &mut Mem) {
+        // Global
+        mem.write(0xFF26, self.audio_master_control);
+        mem.write(0xFF25, self.sound_panning);
+        mem.write(0xFF24, self.master_volume_and_vin_panning);
+
+        // Channel 1
+        mem.write(0xFF10, self.channel_one.sweep);
+        mem.write(0xFF11, self.channel_one.length_timer_and_duty_cycle);
+        mem.write(0xFF12, self.channel_one.volume_and_envelope);
+        mem.write(0xFF13, self.channel_one.period_low);
+        mem.write(0xFF14, self.channel_one.period_high_and_control);
+
+        // Channel 2
+        // No sweep
+        mem.write(0xFF16, self.channel_two.length_timer_and_duty_cycle);
+        mem.write(0xFF17, self.channel_two.volume_and_envelope);
+        mem.write(0xFF18, self.channel_two.period_low);
+        mem.write(0xFF19, self.channel_two.period_high_and_control);
+
+        // Channel 3
+        mem.write(0xFF1A, self.channel_three.dac_enable);
+        mem.write(0xFF1B, self.channel_three.length_timer);
+        mem.write(0xFF1C, self.channel_three.output_level);
+        mem.write(0xFF1D, self.channel_three.period_low);
+        mem.write(0xFF1E, self.channel_three.period_high_and_control);
+
+        let mut idx = 0xFF30;
+        for byte in self.channel_three.wave_ram.iter() {
+            mem.write(idx, *byte);
+            idx += 1
+        }
+
+        // Channel 4
+        mem.write(0xFF41, self.channel_four.length_timer);
+        mem.write(0xFF42, self.channel_four.volume_and_envelope);
+        mem.write(0xFF43, self.channel_four.frequency_and_randomness);
+        mem.write(0xFF44, self.channel_four.control);
     }
 }

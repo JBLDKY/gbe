@@ -1,5 +1,7 @@
+use crate::apu::APU;
 use crate::mem::Mem;
 use crate::{cpu::CPU, gpu::GPU};
+use sdl2::audio::AudioCallback;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::PixelFormatEnum;
 use sdl2::rect::Rect;
@@ -13,6 +15,18 @@ pub const SCREEN_WIDTH: u32 = 160;
 pub const SCREEN_HEIGHT: u32 = 144;
 pub const SCREEN_BITS: u32 = SCREEN_WIDTH * SCREEN_HEIGHT * 4;
 pub const SCALE: u32 = 3;
+
+impl AudioCallback for APU {
+    type Channel = i16;
+
+    fn callback(&mut self, out: &mut [i16]) {
+        for chunk in out.chunks_mut(2) {
+            let (left, right) = self.get_sample();
+            chunk[0] = left;
+            chunk[1] = right;
+        }
+    }
+}
 
 enum EventResult {
     Continue,
@@ -149,11 +163,13 @@ impl Emulator {
             .create_texture_streaming(PixelFormatEnum::RGBA32, SCREEN_WIDTH, SCREEN_HEIGHT)
             .unwrap();
 
+        let mut apu = APU::default();
         'running: loop {
             let cycles = self.cpu.step(&mut self.mem) as usize;
 
             cycles_this_frame += cycles;
 
+            apu.step(&mut self.mem, cycles);
             self.gpu.step(&mut self.mem, cycles);
 
             if cycles_this_frame >= CYCLES_PER_FRAME {
