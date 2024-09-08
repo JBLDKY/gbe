@@ -28,7 +28,7 @@ struct ChannelOne {
     sweep: u8,
     /// ---------------------------------------------------------
     ///
-    /// NR 11 Channel 1 Length Timer & Duty Cycle - Address: 0xFF10
+    /// NR 11 Channel 1 Length Timer & Duty Cycle - Address: 0xFF11
     ///
     /// ┌───┬───┬───┬───┬───┬───┬───┬───┐
     /// │ 7 │ 6 │ 5 │ 4 │ 3 │ 2 │ 1 │ 0 │  Bit Index
@@ -258,9 +258,6 @@ struct ChannelThree {
     ///
     wave_ram: [u8; 16],
 }
-///
-///
-///
 
 #[derive(Debug, Default)]
 struct ChannelFour {
@@ -287,13 +284,13 @@ struct ChannelFour {
     length_timer: u8,
     /// ---------------------------------------------------------
     ///
-    /// NR 42 Channel 4 Volume & Envelope- Address: 0xFF22
+    /// NR 42 Channel 4 Volume & Envelope- Address: 0xFF21
     ///
     /// Identical to NR 12.
     volume_and_envelope: u8,
     /// ---------------------------------------------------------
     ///
-    /// NR 43 Channel 4 Frequency & Randomness- Address: 0xFF23
+    /// NR 43 Channel 4 Frequency & Randomness- Address: 0xFF22
     ///
     /// ┌───┬───┬───┬───┬───┬───┬───┬───┐
     /// │ 7 │ 6 │ 5 │ 4 │ 3 │ 2 │ 1 │ 0 │  Bit Index
@@ -310,7 +307,7 @@ struct ChannelFour {
     frequency_and_randomness: u8,
     /// ---------------------------------------------------------
     ///
-    /// NR 44 Channel 4 Control - Address: 0xFF24
+    /// NR 44 Channel 4 Control - Address: 0xFF23
     ///
     /// ┌───┬───┬───┬───┬───┬───┬───┬───┐
     /// │ 7 │ 6 │ 5 │ 4 │ 3 │ 2 │ 1 │ 0 │  Bit Index
